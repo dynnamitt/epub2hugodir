@@ -1,0 +1,56 @@
+#!/bin/sh
+
+usage() {
+  echo Usage:
+  echo "  $0 [hugoFlags] -- draftRegex epubfile [dest-dir]"
+  exit 1
+
+}
+
+have_cmd(){
+  command -v $1 >/dev/null 2>&1 || {
+    echo >&2 "I require [$1] but it's not installed."
+    echo >&2 "Aborting."
+    exit 1; }
+}
+
+file_chk(){
+  stat $1 >/dev/null 2>&1 || {
+    echo >&2 "File not found; '$1'"
+    exit 1; }
+}
+
+have_cmd grep
+have_cmd stat
+have_cmd hugo
+have_cmd xsltproc
+
+
+
+# TODO grab ALL flags and shift;shift;shift until no more flags
+
+ISDRAFT_REGEX=$1
+EPUB=$2
+
+echo ------ DEBUG -------------
+echo ISDRAFT_REGEX = $ISDRAFT_REGEX
+echo EPUB = $EPUB
+echo ==========================
+
+test -z $ISDRAFT_REGEX && usage 
+test -z $EPUB && usage 
+
+
+if test -d "$EPUB"; then
+  echo "* epubfile is assumed to be extracted-dir."
+  file_chk "$EPUB/META-INF/container.xml"
+else
+  echo "* epubfile must be unzipped."
+  file_chk "$EPUB"
+  have_cmd unzip
+fi
+
+HUGODIR=${3:-$(dirname $EPUB)}
+echo HUGODIR = $HUGODIR
+file_chk $HUGODIR
+
