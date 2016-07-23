@@ -66,6 +66,8 @@ file_chk $HUGODIR warn-only
 echo ep_dir = $ep_dir
 echo HUGODIR = $HUGODIR
 
+test "$ep_dir" = "$HUGODIR" && echo "NB ; DEST same as SRC"
+
 # Unzip or CP if needed
 if test "$ZIPPED" = "1"
 then
@@ -73,6 +75,6 @@ then
 elif test ! "$HUGODIR" = "$ep_dir"
 then
   mkdir -p $HUGODIR
-  cp -r "$EPUB/*" "$HUGODIR"
+  cp -r "$EPUB"/* "$HUGODIR"
 fi
 
