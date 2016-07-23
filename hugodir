@@ -1,12 +1,15 @@
 #!/bin/sh
 
 EP_MIMETYPE=mimetype
+EP_CONT=META-INF/container.xml
+XSL_EP_ROOTFILE=ep-rootfile.xsl
+HUGO_CONF=config.toml
 
 usage() {
   echo "Error: '$1'"
   echo
   echo Usage:
-  echo "  $0 [hugoFlags] -- draftRegex epubfile [destdir]"
+  echo "  $0 draftRegex epubfile [destdir] [-- [hugoFlags]]"
   exit 1
 
 }
@@ -19,25 +22,27 @@ have_cmd(){
     exit 1; }
 }
 
-file_chk(){
+file_chk_die(){
   stat $1 >/dev/null 2>&1 || {
     echo >&2 "File not found; '$1'"
-    test -z "$2" && exit 1; }
+    exit 1; } 
 }
 
+path_chk_warn(){
+  stat $1 >/dev/null 2>&1 || {
+    echo >&2 "Warning , path not found; '$1'"; }
+}
 
-printf "* Checking availiable COMMANDs in system..."
-
-have_cmd grep
-have_cmd stat
-have_cmd readlink
-have_cmd hugo
-have_cmd xsltproc
-
-echo "ok"
-
-alias realpath="readlink -f"
-
+xslt_doc(){
+  cat << _EOF
+<xsl:stylesheet version="1.0" 
+ xmlns:cont="urn:oasis:names:tc:opendocument:xmlns:container"
+ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+ <xsl:output type="text" encoding="utf-8" omit-xml-declaration="yes"/>
+$1
+</xsl:stylesheet>
+_EOF
+}
 
 # TODO grab ALL flags and shift;shift;shift until no more flags
 
@@ -47,34 +52,62 @@ EPUB=$2
 test -z $ISDRAFT_REGEX && usage "draftRegex empty" 
 test -z $EPUB && usage "epubfile empty"
 
+printf "* Checking availiable COMMANDs in system..."
+have_cmd grep
+have_cmd stat
+have_cmd readlink
+have_cmd hugo
+have_cmd xsltproc
+echo "ok"
+
+alias realpath="readlink -f"
 
 if test -d "$EPUB"; then
-  echo "* epubfile is assumed to be extracted-dir."
-  file_chk "$EPUB/$EP_MIMETYPE"
+  printf "* epubfile is assumed to be extracted-dir..."
+  file_chk_die "$EPUB/$EP_MIMETYPE"
+  echo "ok"
 else
-  echo "* epubfile must be unzipped."
+  echo "* epubfile will be unzipped."
   ZIPPED=1
-  file_chk "$EPUB"
+  file_chk_die "$EPUB"
   have_cmd unzip
 fi
 
 ep_dir=$(realpath $(dirname $EPUB))
 
 HUGODIR=$(realpath ${3:-$ep_dir})
-file_chk $HUGODIR warn-only
+path_chk_warn $HUGODIR
 
-echo ep_dir = $ep_dir
-echo HUGODIR = $HUGODIR
+if test "$ep_dir" = "$HUGODIR"
+then 
+  echo "NB ; destdir same as EPUB location"
+fi
 
-test "$ep_dir" = "$HUGODIR" && echo "NB ; DEST same as SRC"
+# DIE fast if tools fail
+set -e
 
 # Unzip or CP if needed
 if test "$ZIPPED" = "1"
 then
-  unzip "$EPUB" -d "$HUGODIR"
+  printf "* unzipping into $HUGODIR..."
+  unzip -q "$EPUB" -d "$HUGODIR"
+  echo "ok"
 elif test ! "$HUGODIR" = "$ep_dir"
 then
+  printf "* mkdir+copying into $HUGODIR..."
   mkdir -p $HUGODIR
   cp -r "$EPUB"/* "$HUGODIR"
+  echo "ok"
 fi
+
+
+cd $HUGODIR
+
+EP_ROOT_PATH="$(xsltproc $XSL_EP_ROOTFILE $EP_CONT)" 
+
+
+# config.toml
+cat << _EOF > $HUGO_CONF
+contentdir=$(dirname $EP_ROOT_PATH)
+_EOF
 
