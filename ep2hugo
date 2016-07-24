@@ -1,0 +1,198 @@
+#!/bin/sh
+
+# -------------------------------
+# CONSTS
+# -------------------------------
+EP_CONT=META-INF/container.xml
+HUGO_CONF=config.toml
+
+
+# ------------------------
+# func: help then exit
+#
+#  usage "error-text"
+# ------------------------
+usage() {
+  echo
+  echo Usage:
+  echo "  $0 [flags] epubfile destdir [-- [hugoFlags]]"
+  echo
+  echo "  epubfile can be either epub-file OR extracted directory"
+  echo "  destdir cannot be same dir and will be created if not found"
+  echo "  hugoFlags will be passed on to hugo command as last operation"
+  echo
+  echo Flags:
+  echo "  -d,-- draftXpath  Will mark content as [draft] if result is TRUE"
+  echo
+  echo "!! Error: '$1'"
+  exit 1
+
+}
+
+# --------------------------------
+# func: exit unless command found
+#  
+#  have_cmd cmd
+# --------------------------------
+have_cmd(){
+  command -v $1 >/dev/null 2>&1 || {
+    echo >&2
+    echo >&2 " - I require [$1] but it's not installed."
+    echo >&2 "   Aborting."
+    exit 1; }
+}
+
+# ------------------------------
+# func: exit unless path found
+#
+#  exist_or_die filepath
+# ------------------------------
+exist_or_die(){
+  stat $1 >/dev/null 2>&1 || {
+    echo >&2 "File not found; '$1'"
+    exit 1; } 
+}
+
+# ----------------------------------
+# func: print warning unless path found
+#
+#  path_chk_warn filepath
+# ----------------------------------
+path_chk_warn(){
+  stat $1 >/dev/null 2>&1 || {
+    echo >&2 "- Warning , path not found; '$1'"; }
+}
+
+# ------------------------------------------------
+# func: wrap args in xslt-doc
+#
+#  xsl_doc "xslt-expr" "xslt-expr2" "xslt-expr3" 
+# ------------------------------------------------
+xsl_doc(){
+  cat << _EOF
+<xsl:stylesheet version="1.0" 
+ xmlns:cont="urn:oasis:names:tc:opendocument:xmlns:container"
+ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+ <xsl:output type="text" encoding="utf-8" omit-xml-declaration="yes"/>
+$@
+</xsl:stylesheet>
+_EOF
+}
+
+# ------------------------------------------------
+# func: wrap args in xslt:templ-tag
+#
+#  xslt_templ "xslt-expr" "xslt-expr2" "xslt-expr3" 
+# ------------------------------------------------
+xsl_templ(){
+  _MATCH=$1
+  shift
+  _EXPRS=$@
+  printf "<xsl:template match=\"${_MATCH}\">"
+  printf "${_EXPRS}</xsl:template>"
+}
+
+# -------------------------------------------------
+# func: non-generic xslt that find epub-package path
+#
+#  _rootfile_path 
+# -------------------------------------------------
+_rootfile_path(){
+  xsl_doc $(xsl_templ \
+    "//cont:rootfile[@media-type='application/oebps-package+xml']" \
+    "<xsl:value-of select=\"@full-path\"/>" )
+}
+
+
+# =============================================
+#                         _       
+#         _ __ ___   __ _(_)_ __  
+#        | '_ ` _ \ / _` | | '_ \ 
+#        | | | | | | (_| | | | | |
+#        |_| |_| |_|\__,_|_|_| |_|
+# 
+
+set -e # DIE fast 
+            
+# ----------------------
+# commands validation
+# ----------------------
+printf "* Checking availiable COMMANDs in system..."
+have_cmd getopts
+have_cmd grep
+have_cmd stat
+have_cmd readlink
+have_cmd hugo
+have_cmd xsltproc
+echo "ok"
+
+alias realpath="readlink -f"
+
+# -----------------------------
+# collect args if any
+# -----------------------------
+
+# ---------------------
+# args, Input+Output
+# ---------------------
+EPUB=$1
+HUGODIR=$2
+test -z $EPUB && usage "epubfile empty"
+test -z $HUGODIR && usage "destdir empty"
+
+# -------------------------
+# Avoid DEST = SRC
+# -------------------------
+ep_dir=$(realpath $(dirname $EPUB))
+if test "$ep_dir" = "$HUGODIR"
+then 
+  echo >&2 "NB ; destdir same as EPUB location"
+  exit 1
+fi
+
+# -----------------------------------
+# Check input variant (file or dir)
+# -----------------------------------
+if test -d "$EPUB"; then
+  printf "* epubfile is assumed to be extracted-dir..."
+  exist_or_die "$EPUB/$EP_CONT"
+  echo "ok"
+  EPUB_SRC=$EPUB
+else
+  echo "* epubfile will be unzipped."
+  exist_or_die "$EPUB"
+  have_cmd unzip
+  printf "* unzipping ..."
+  _tmp_dir_unzip=$(mktemp --directory)
+  unzip -q "$EPUB" -d "$_tmp_dir_unzip"
+  exist_or_die "$_tmp_dir_unzip/$EP_CONT"
+  echo "ok"
+  EPUB_SRC=$_tmp_dir_unzip
+fi
+
+
+# -----------------------------------
+# Move+transform content into destdir
+# -----------------------------------
+path_chk_warn $HUGODIR
+printf "* mkdir+copying into '$HUGODIR' ..."
+mkdir -p $HUGODIR
+cp -r "$EPUB_SRC"/* "$HUGODIR"
+echo "ok"
+
+
+# ----------- enter dir ------------
+cd $HUGODIR
+
+# TODO make func
+_xsl_tmp=$(mktemp)
+_rootfile_path > $_xsl_tmp
+
+EP_ROOT_PATH="$(xsltproc "$_xsl_tmp" "$EP_CONT")" 
+
+# # config.toml
+cat << _EOF > $HUGO_CONF
+contentdir = "$(dirname $EP_ROOT_PATH)"
+_EOF
+
+hugo
