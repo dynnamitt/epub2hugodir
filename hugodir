@@ -2,7 +2,6 @@
 
 EP_MIMETYPE=mimetype
 EP_CONT=META-INF/container.xml
-XSL_EP_ROOTFILE=ep-rootfile.xsl
 HUGO_CONF=config.toml
 
 usage() {
@@ -43,6 +42,19 @@ $1
 </xsl:stylesheet>
 _EOF
 }
+
+xslt_templ(){
+  cat << _EOF
+  <xsl:template match="$1">$2</xsl:template>
+_EOF
+}
+
+rootfile(){
+  xslt_doc $(xslt_templ x y)
+}
+
+
+
 
 # TODO grab ALL flags and shift;shift;shift until no more flags
 
@@ -103,11 +115,13 @@ fi
 
 cd $HUGODIR
 
-EP_ROOT_PATH="$(xsltproc $XSL_EP_ROOTFILE $EP_CONT)" 
+rootfile
+
+# EP_ROOT_PATH="$(xsltproc $XSL_EP_ROOTFILE $EP_CONT)" 
 
 
-# config.toml
-cat << _EOF > $HUGO_CONF
-contentdir=$(dirname $EP_ROOT_PATH)
-_EOF
+# # config.toml
+# cat << _EOF > $HUGO_CONF
+# contentdir=$(dirname $EP_ROOT_PATH)
+# _EOF
 
