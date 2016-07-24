@@ -1,6 +1,5 @@
 #!/bin/sh
 
-EP_MIMETYPE=mimetype
 EP_CONT=META-INF/container.xml
 XSL_EP_ROOTFILE=ep-rootfile.xsl
 HUGO_CONF=config.toml
@@ -64,7 +63,7 @@ alias realpath="readlink -f"
 
 if test -d "$EPUB"; then
   printf "* epubfile is assumed to be extracted-dir..."
-  file_chk_die "$EPUB/$EP_MIMETYPE"
+  file_chk_die "$EPUB/$EP_CONT"
   echo "ok"
 else
   echo "* epubfile will be unzipped."
