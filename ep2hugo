@@ -22,7 +22,7 @@ usage() {
   echo "  hugoFlags will be passed on to hugo command as last operation"
   echo
   echo Flags:
-  echo "  -d,-- draftXpath  Will mark content as [draft] if result is TRUE"
+  echo "  -d  xpath marking content chunk as draft"
   echo
   echo "!! Error: '$1'"
   exit 1
@@ -184,7 +184,7 @@ echo "ok"
 # ----------- enter dir ------------
 cd $HUGODIR
 
-# TODO make func
+# TODO make func ASAP !!
 _xsl_tmp=$(mktemp)
 _rootfile_path > $_xsl_tmp
 
