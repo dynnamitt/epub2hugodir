@@ -37,19 +37,21 @@ xslt_doc(){
  xmlns:cont="urn:oasis:names:tc:opendocument:xmlns:container"
  xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
  <xsl:output type="text" encoding="utf-8" omit-xml-declaration="yes"/>
-$1
+$@
 </xsl:stylesheet>
 _EOF
 }
 
 xslt_templ(){
-  cat << _EOF
-  <xsl:template match="$1">$2</xsl:template>
-_EOF
+  printf "<xsl:template match=\"$1\">"
+  shift
+  printf "$@</xsl:template>"
 }
 
 rootfile(){
-  xslt_doc $(xslt_templ x y)
+  xslt_doc $(xslt_templ \
+    "//cont:rootfile[@media-type=\'application/oebps-package+xml\']" \
+    "<xsl:value-of select=\"@full-path\"/>" )
 }
 
 
