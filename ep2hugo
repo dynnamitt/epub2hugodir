@@ -6,6 +6,10 @@
 EP_CONT=META-INF/container.xml
 HUGO_CONF=config.toml
 
+DEF_XPATH_DRAFT=
+DEF_CONTENT_DIRNAME=_content
+
+
 
 # ------------------------
 # func: help then exit
@@ -15,14 +19,14 @@ HUGO_CONF=config.toml
 usage() {
   echo
   echo Usage:
-  echo "  $0 [flags] epubfile destdir [-- [hugoFlags]]"
+  echo "  $0 [flags] epubfile [destdir]"
   echo
   echo "  epubfile can be either epub-file OR extracted directory"
-  echo "  destdir cannot be same dir and will be created if not found"
-  echo "  hugoFlags will be passed on to hugo command as last operation"
+  echo "  destdir default is basedir/root of epubfile"
   echo
   echo Flags:
-  echo "  -d  xpath marking content chunk as draft"
+  echo "  -d string     Xpath marking content chunk as draft. Default empty"
+  echo "  -c string     Contentdir name. Default is '_content'"
   echo
   echo "!! Error: '$1'"
   exit 1
@@ -48,7 +52,7 @@ have_cmd(){
 #  exist_or_die filepath
 # ------------------------------
 exist_or_die(){
-  stat $1 >/dev/null 2>&1 || {
+  stat "$1" >/dev/null 2>&1 || {
     echo >&2 "File not found; '$1'"
     exit 1; } 
 }
@@ -59,7 +63,7 @@ exist_or_die(){
 #  path_chk_warn filepath
 # ----------------------------------
 path_chk_warn(){
-  stat $1 >/dev/null 2>&1 || {
+  stat "$1" >/dev/null 2>&1 || {
     echo >&2 "- Warning , path not found; '$1'"; }
 }
 
@@ -79,11 +83,11 @@ $@
 _EOF
 }
 
-# ------------------------------------------------
+# -------------------------------------------------------
 # func: wrap args in xslt:templ-tag
 #
-#  xslt_templ "xslt-expr" "xslt-expr2" "xslt-expr3" 
-# ------------------------------------------------
+#  xslt_templ "match-expr" "xslt-expr1" "xslt-expr2" .. 
+# -------------------------------------------------------
 xsl_templ(){
   _MATCH=$1
   shift
@@ -98,7 +102,11 @@ xsl_templ(){
 #  _rootfile_path 
 # -------------------------------------------------
 _rootfile_path(){
+  # first template is GRUNT to avoid 2 newlines
   xsl_doc $(xsl_templ \
+    "/cont:container" \
+    "<xsl:apply-templates select=\"//cont:rootfile\" />") \
+    $(xsl_templ \
     "//cont:rootfile[@media-type='application/oebps-package+xml']" \
     "<xsl:value-of select=\"@full-path\"/>" )
 }
@@ -124,6 +132,7 @@ have_cmd stat
 have_cmd readlink
 have_cmd hugo
 have_cmd xsltproc
+have_cmd parallel
 echo "ok"
 
 alias realpath="readlink -f"
@@ -136,33 +145,36 @@ alias realpath="readlink -f"
 # args, Input+Output
 # ---------------------
 EPUB=$1
-HUGODIR=$2
-test -z $EPUB && usage "epubfile empty"
-test -z $HUGODIR && usage "destdir empty"
+test -z "$EPUB" && usage "epubfile empty"
 
-# -------------------------
-# Avoid DEST = SRC
-# -------------------------
+HUGODIR=${2:-$(dirname "$EPUB")}
+test -z "$HUGODIR" && usage "destdir empty"
+
+CONTENT_DIRNAME=${DEF_CONTENT_DIRNAME}
+
+
+# ---------------------------
+# is DEST = SRC ? just warn
+# ---------------------------
 ep_dir=$(realpath $(dirname $EPUB))
-if test "$ep_dir" = "$HUGODIR"
+if test "$ep_dir" = $(realpath "$HUGODIR")
 then 
-  echo >&2 "NB ; destdir same as EPUB location"
-  exit 1
+  echo >&2 "! NB, destdir same as EPUB location"
 fi
 
 # -----------------------------------
 # Check input variant (file or dir)
 # -----------------------------------
 if test -d "$EPUB"; then
-  printf "* epubfile is assumed to be extracted-dir..."
+  printf "* Epubfile is assumed to be extracted-dir..."
   exist_or_die "$EPUB/$EP_CONT"
   echo "ok"
   EPUB_SRC=$EPUB
 else
-  echo "* epubfile will be unzipped."
+  echo "* Epubfile will be unzipped."
   exist_or_die "$EPUB"
   have_cmd unzip
-  printf "* unzipping ..."
+  printf "* Unzipping ..."
   _tmp_dir_unzip=$(mktemp --directory)
   unzip -q "$EPUB" -d "$_tmp_dir_unzip"
   exist_or_die "$_tmp_dir_unzip/$EP_CONT"
@@ -175,24 +187,33 @@ fi
 # Move+transform content into destdir
 # -----------------------------------
 path_chk_warn $HUGODIR
-printf "* mkdir+copying into '$HUGODIR' ..."
-mkdir -p $HUGODIR
-cp -r "$EPUB_SRC"/* "$HUGODIR"
-echo "ok"
 
+CONTENT_DIR=$HUGODIR/$CONTENT_DIRNAME
+mkdir -p $CONTENT_DIR
 
-# ----------- enter dir ------------
-cd $HUGODIR
 
 # TODO make func ASAP !!
 _xsl_tmp=$(mktemp)
 _rootfile_path > $_xsl_tmp
 
-EP_ROOT_PATH="$(xsltproc "$_xsl_tmp" "$EP_CONT")" 
+
+EP_ROOT_PATH="$(xsltproc "$_xsl_tmp" "$EPUB_SRC/$EP_CONT")" 
+echo "* Packagefile rel path is '$EP_ROOT_PATH'"
 
 # # config.toml
-cat << _EOF > $HUGO_CONF
-contentdir = "$(dirname $EP_ROOT_PATH)"
+printf "* Writing '$HUGODIR/$HUGO_CONF'..."
+cat << _EOF > "$HUGODIR/$HUGO_CONF"
+contentdir = "$(dirname $EP_ROOT_PATH)/$CONTENT_DIRNAME"
 _EOF
+echo "ok"
 
-hugo
+echo "--------ENDE of sequencial code..."
+
+for f in "$EPUB_SRC"/*
+do
+  _f=$(echo $f| tr ' ' '+')
+  printf "* Copying $(basename $f) to $(basename $_f)..."
+  echo ok
+done
+echo "ok"
+
