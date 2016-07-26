@@ -131,7 +131,6 @@ have_cmd getopts
 have_cmd grep
 have_cmd stat
 have_cmd readlink
-have_cmd hugo
 have_cmd xsltproc
 have_cmd parallel
 echo "ok"
