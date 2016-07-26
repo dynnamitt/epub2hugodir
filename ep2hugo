@@ -10,7 +10,6 @@ DEF_XPATH_DRAFT=
 DEF_CONTENT_DIRNAME=_content
 
 
-
 # ------------------------
 # func: help then exit
 #
@@ -27,6 +26,8 @@ usage() {
   echo Flags:
   echo "  -d string     Xpath marking content chunk as draft. Default empty"
   echo "  -c string     Contentdir name. Default is '_content'"
+  echo "  -r string     Rename rules"
+
   echo
   echo "!! Error: '$1'"
   exit 1
