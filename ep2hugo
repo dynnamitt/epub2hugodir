@@ -26,7 +26,7 @@ usage() {
   echo Flags:
   echo "  -d string     Xpath marking content chunk as draft. Default empty"
   echo "  -c string     Contentdir name. Default is '_content'"
-  echo "  -r string     Rename rules"
+  echo "  -r path       Custom xslt script generating the name-map.xml"
 
   echo
   echo "!! Error: '$1'"
