@@ -1,11 +1,14 @@
 #!/bin/sh
 
+#  uncomment below to trace 
+#  set -x
+
 # -------------------------------
 # CONSTS
 # -------------------------------
 EP_CONT=META-INF/container.xml
 HUGO_CONF=config.toml
-NAMES_MAP=names-map.xml
+NAME_MAP=name-map.xml
 
 DEF_XPATH_DRAFT=
 DEF_CONTENT_DIRNAME=_content
@@ -111,9 +114,6 @@ xsl(){
   xsltproc "$_xsl_tmp" "$2"
 }
 
-
-EP_OPF_PATH="$(xsltproc "$_xsl_tmp" "$EPUB_SRC/$EP_CONT")" 
-
 # -------------------------------------------------------
 # func: wrap args in xslt:templ-tag
 #
@@ -131,8 +131,6 @@ xsl_templ(){
 # func: xslt that find epub-package path
 #
 #  inputdoc == oasis/container
-#
-#  _rootfile_path 
 # -------------------------------------------------
 _rootfile_path(){
   # first template is GRUNT to avoid 2 newlines
@@ -146,8 +144,6 @@ _rootfile_path(){
 # func: xslt that find ncx href (if in OPF)
 #
 #   inputdoc = 'package' aka 'opf' aka 'rootfile'
-#
-#   _ncx_path
 # -------------------------------------------------
 _ncx_path(){
   # first template is GRUNT to avoid 2 newlines
@@ -161,8 +157,6 @@ _ncx_path(){
 # func: xslt that find ep3-xh-toc href
 #
 #   inputdoc = 'package' aka 'opf' aka 'rootfile'
-#
-#   _toc_path
 # -------------------------------------------------
 _toc_path(){
   # first template is GRUNT to avoid 2 newlines
@@ -177,8 +171,6 @@ _toc_path(){
 # HUGO will not RECOGNIZE .xhtm* ext.. so adjust to .htm*
 #
 #  inputdoc == package/opf
-#
-#  _names_map_from_opf
 # --------------------------------------------------
 _names_map_from_opf(){
   xsl_doc xml $(xsl_templ "/opf:package" \
@@ -202,8 +194,6 @@ _names_map_from_opf(){
 # HUGO will not RECOGNIZE .xhtm* ext.. so adjust to .htm*
 #
 #  inputdoc == daisy/ncx
-#
-#  _names_map_from_ncx
 # --------------------------------------------------
 _names_map_from_ncx(){
   xsl_doc xml $(xsl_templ "/" \
@@ -224,6 +214,21 @@ _names_map_from_ncx(){
     "</content>" )
  }
 
+# -------------------------------------------
+# func: xslt script,
+#    names-map.xml into UNIX txt database
+# 
+# inputdoc == $NAMES_MAP aka names-map.xml
+# -------------------------------------------
+_name_rows(){
+   xsl_doc text $(xsl_templ "/contents" \
+     "<xsl:apply-templates select=\"content\"/>" ) \
+     $(xsl_templ "content" \
+     "<xsl:value-of select=\"src\"/>" \
+     "<xsl:text> </xsl:text>" \
+     "<xsl:value-of select=\"dest\"/>"\
+     "<xsl:text>&#xA;</xsl:text>")
+}
 
 
 # =============================================
@@ -235,7 +240,9 @@ _names_map_from_ncx(){
 # 
 
 set -e # DIE fast 
-            
+           
+
+
 # ----------------------
 # commands validation
 # ----------------------
@@ -264,7 +271,6 @@ HUGO_DIR=${2:-$(dirname "$EPUB")}
 test -z "$HUGO_DIR" && usage "destdir empty"
 
 CONTENT_DIRNAME=${DEF_CONTENT_DIRNAME}
-
 
 # ---------------------------
 # is DEST = SRC ? just warn
@@ -336,13 +342,17 @@ fi
 echo "NB, -r not impl yet.........."
 
 # -------------------------------------------
-#   names-map.xml
+#   name-map.{xml|txt}
 # --------------------------------------------
-printf "* generating '$HUGO_DIR/$NAMES_MAP'..."
-$(xsl _names_map_from_opf "$EPUB_SRC/$EP_OPF_PATH" > "$HUGO_DIR/$NAMES_MAP")
+printf "* Generating '$HUGO_DIR/$NAME_MAP'..."
+$(xsl _names_map_from_opf "$EPUB_SRC/$EP_OPF_PATH" > "$HUGO_DIR/$NAME_MAP")
 echo ok
 
-# fix cross-hrefs inside all docs
+_tmp_jobs_file=$(mktemp /tmp/name_map_XXXXX.txt)
+printf "* Generating '$_tmp_jobs_file' UNIX db..."
+$(xsl _name_rows "$HUGO_DIR/$NAME_MAP" > "$_tmp_jobs_file" )
+echo ok
+
 
 # # config.toml
 printf "* Writing '$HUGO_DIR/$HUGO_CONF'..."
@@ -351,4 +361,6 @@ contentdir = "$(dirname $EP_OPF_PATH)/$CONTENT_DIRNAME"
 _EOF
 echo "ok"
 
-printf "* Each contentfile will.."
+echo "* concurrent mapping of content file(s)...'$_tmp_jobs_file'..."
+echo
+echo TODO
