@@ -71,18 +71,44 @@ path_chk_warn(){
 # ------------------------------------------------
 # func: wrap args in xslt-doc
 #
-#  xsl_doc "xslt-expr" "xslt-expr2" "xslt-expr3" 
+#  xsl_doc method "xslt-expr" "xslt-expr2" "xslt-expr3" 
 # ------------------------------------------------
 xsl_doc(){
+  _method=$1
+  if test "$_method" = "text"; then
+    _omit_decl=yes
+  else
+    _omit_decl=no
+  fi
+  shift
   cat << _EOF
 <xsl:stylesheet version="1.0" 
  xmlns:cont="urn:oasis:names:tc:opendocument:xmlns:container"
- xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
- <xsl:output type="text" encoding="utf-8" omit-xml-declaration="yes"/>
+ xmlns:ncx="http://www.daisy.org/z3986/2005/ncx/"
+ xmlns:opf="http://www.idpf.org/2007/opf"
+ xmlns:strings="http://exslt.org/strings"
+ xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+ exclude-result-prefixes="ncx strings cont opf">
+ <xsl:output method="$_method" encoding="utf-8" 
+    omit-xml-declaration="$_omit_decl"/>
 $@
 </xsl:stylesheet>
 _EOF
 }
+
+# ----------------------------------
+# func: helper xslt grunt
+#
+# xslt local-xslt-func input-xml
+# ----------------------------------
+xsl(){
+  _xsl_tmp=$(mktemp /tmp/ep2hugo_XXXXXX.xsl)
+  $1 > "$_xsl_tmp"
+  xsltproc "$_xsl_tmp" "$2"
+}
+
+
+EP_OPF_PATH="$(xsltproc "$_xsl_tmp" "$EPUB_SRC/$EP_CONT")" 
 
 # -------------------------------------------------------
 # func: wrap args in xslt:templ-tag
@@ -98,19 +124,75 @@ xsl_templ(){
 }
 
 # -------------------------------------------------
-# func: non-generic xslt that find epub-package path
+# func: xslt that find epub-package path
+#
+#  inputdoc == oasis/container
 #
 #  _rootfile_path 
 # -------------------------------------------------
 _rootfile_path(){
   # first template is GRUNT to avoid 2 newlines
-  xsl_doc $(xsl_templ \
-    "/cont:container" \
+  xsl_doc text $(xsl_templ "/cont:container" \
     "<xsl:apply-templates select=\"//cont:rootfile\" />") \
-    $(xsl_templ \
-    "//cont:rootfile[@media-type='application/oebps-package+xml']" \
+    $(xsl_templ "//cont:rootfile[@media-type='application/oebps-package+xml']" \
     "<xsl:value-of select=\"@full-path\"/>" )
 }
+
+# ---------------------------------------------
+# func: xslt that find ncx href (if in OPF)
+#
+#   inputdoc = 'package' aka 'opf' aka 'rootfile'
+#
+#   _ncx_path
+# -------------------------------------------------
+_ncx_path(){
+  # first template is GRUNT to avoid 2 newlines
+  xsl_doc text $(xsl_templ "/" \
+    "<xsl:apply-templates select=\"//opf:item\" />") \
+    $(xsl_templ "//opf:item[@media-type='application/x-dtbncx+xml']" \
+    "<xsl:value-of select=\"@href\"/>" )
+}
+
+# ---------------------------------------------
+# func: xslt that find ep3-xh-toc href
+#
+#   inputdoc = 'package' aka 'opf' aka 'rootfile'
+#
+#   _toc_path
+# -------------------------------------------------
+_toc_path(){
+  # first template is GRUNT to avoid 2 newlines
+  xsl_doc text $(xsl_templ "/" \
+    "<xsl:apply-templates select=\"//opf:item\" />") \
+    $(xsl_templ "//opf:item[@properties='nav']" \
+    "<xsl:value-of select=\"@href\"/>" )
+}
+
+# --------------------------------------------------
+# func: default names-map xslt, not used if -r set
+#
+#  inputdoc == daisy/ncx
+#
+#  _names_map
+# --------------------------------------------------
+_names_map_from_ncx(){
+  xsl_doc xml $(xsl_templ "/" \
+    "<contents>" \
+    "  <xsl:apply-templates select=\"//ncx:content/@src\"/>" \
+    "</contents>" ) \
+    $(xsl_templ "//ncx:content/@src" \
+    "<xsl:variable name=\"fname\">" \
+    "  <xsl:value-of select=\"strings:split(.,'#')[1]\"/>" \
+    "</xsl:variable>" \
+    "<content>" \
+    "  <src>" \
+    "    <xsl:value-of select=\"\$fname\"/>" \
+    "  </src>" \
+    "  <dest>" \
+    "    <xsl:value-of select=\"strings:replace(\$fname,'.xhtm','.htm')\"/>" \
+    "  </dest>" \
+    "</content>" )
+ }
 
 
 # =============================================
@@ -174,8 +256,9 @@ else
   echo "* Epubfile will be unzipped."
   exist_or_die "$EPUB"
   have_cmd unzip
-  printf "* Unzipping ..."
-  _tmp_dir_unzip=$(mktemp --directory)
+  printf "* Unzipping to"
+  _tmp_dir_unzip=$(mktemp --directory /tmp/epub_dir_XXXXXX)
+  printf " tempdir '$_tmp_dir_unzip'..."
   unzip -q "$EPUB" -d "$_tmp_dir_unzip"
   exist_or_die "$_tmp_dir_unzip/$EP_CONT"
   echo "ok"
@@ -191,23 +274,32 @@ path_chk_warn $HUGODIR
 CONTENT_DIR=$HUGODIR/$CONTENT_DIRNAME
 mkdir -p $CONTENT_DIR
 
+EP_OPF_PATH=$(xsl _rootfile_path "$EPUB_SRC/$EP_CONT")
+echo "* Packagefile rel path is '$EP_OPF_PATH'"
 
-# TODO make func ASAP !!
-_xsl_tmp=$(mktemp)
-_rootfile_path > $_xsl_tmp
+EP_NCX_PATH=$(xsl _ncx_path "$EPUB_SRC/$EP_OPF_PATH")
 
-
-EP_ROOT_PATH="$(xsltproc "$_xsl_tmp" "$EPUB_SRC/$EP_CONT")" 
-echo "* Packagefile rel path is '$EP_ROOT_PATH'"
+if test -z "$EP_NCX_PATH"; then
+  printf "! NCX not found, searching for xhtml-toc..."
+  EP_XHTOC_PATH=$(xsl _toc_path "$EPUB_SRC/$EP_OPF_PATH")
+  if test -z "$EP_XHTOC_PATH"; then
+    echo "NOT FOUND, aborting!"
+    exit 1
+  else
+    echo " '$EP_XHTOC_PATH'"
+  fi
+else
+  echo "* NCX rel path is '$EP_OPF_PATH'"
+fi
 
 # # config.toml
 printf "* Writing '$HUGODIR/$HUGO_CONF'..."
 cat << _EOF > "$HUGODIR/$HUGO_CONF"
-contentdir = "$(dirname $EP_ROOT_PATH)/$CONTENT_DIRNAME"
+contentdir = "$(dirname $EP_OPF_PATH)/$CONTENT_DIRNAME"
 _EOF
 echo "ok"
 
-echo "--------ENDE of sequencial code..."
+echo "--------ENDE of sequencial code"
 
 for f in "$EPUB_SRC"/*
 do
@@ -216,4 +308,3 @@ do
   echo ok
 done
 echo "ok"
-

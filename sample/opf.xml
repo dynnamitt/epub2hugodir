@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" version="2.0" unique-identifier="uid">
+    <metadata xmlns:opf="http://www.idpf.org/2007/opf" xmlns:dc="http://purl.org/dc/elements/1.1/">
+        <dc:title>Ot.prp.nr.42 (2002-2003) Om lov om endringer i skatteloven m.m.</dc:title>
+        <dc:creator opf:role="aut">Stiftelsen Lovdata</dc:creator>
+        <dc:publisher>Stiftelsen Lovdata</dc:publisher>
+        <dc:date opf:event="creation">2015-02-26</dc:date>
+        <dc:date opf:event="modification">0001-01-01</dc:date>
+        <dc:date opf:event="publication">2015-02-26</dc:date>
+        <dc:subject>Ot.prp.nr.42 (2002-2003) Om lov om endringer i skatteloven m.m.</dc:subject>
+        <dc:identifier id="uid">urn:uuid:8f5bed47-64f0-48a4-a0a4-74a60b16c852</dc:identifier>
+        <dc:language>en-US</dc:language>
+        <dc:contributor opf:role="bkp">Aspose.Words for Java 15.1.0.0</dc:contributor>
+        <meta name="generator" content="Aspose.Words for Java 15.1.0.0"/>
+    </metadata>
+    <manifest>
+        <item id="ncx" href="Otprpnr42 2002-2003 Om lov om endringer i skatteloven mm.ncx"
+            media-type="application/x-dtbncx+xml"/>
+        <item id="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm.html"
+            href="Otprpnr42 2002-2003 Om lov om endringer i skatteloven mm.html"
+            media-type="application/xhtml+xml"/>
+        <item id="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-01.html"
+            href="Otprpnr42 2002-2003 Om lov om endringer i skatteloven mm-01.html"
+            media-type="application/xhtml+xml"/>
+        <item id="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-02.html"
+            href="Otprpnr42 2002-2003 Om lov om endringer i skatteloven mm-02.html"
+            media-type="application/xhtml+xml"/>
+        <item id="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-03.html"
+            href="Otprpnr42 2002-2003 Om lov om endringer i skatteloven mm-03.html"
+            media-type="application/xhtml+xml"/>
+        <item id="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-04.html"
+            href="Otprpnr42 2002-2003 Om lov om endringer i skatteloven mm-04.html"
+            media-type="application/xhtml+xml"/>
+        <item id="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-05.html"
+            href="Otprpnr42 2002-2003 Om lov om endringer i skatteloven mm-05.html"
+            media-type="application/xhtml+xml"/>
+        <item id="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-06.html"
+            href="Otprpnr42 2002-2003 Om lov om endringer i skatteloven mm-06.html"
+            media-type="application/xhtml+xml"/>
+        <item id="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-07.html"
+            href="Otprpnr42 2002-2003 Om lov om endringer i skatteloven mm-07.html"
+            media-type="application/xhtml+xml"/>
+        <item id="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-08.html"
+            href="Otprpnr42 2002-2003 Om lov om endringer i skatteloven mm-08.html"
+            media-type="application/xhtml+xml"/>
+        <item id="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-09.html"
+            href="Otprpnr42 2002-2003 Om lov om endringer i skatteloven mm-09.html"
+            media-type="application/xhtml+xml"/>
+        <item id="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-10.html"
+            href="Otprpnr42 2002-2003 Om lov om endringer i skatteloven mm-10.html"
+            media-type="application/xhtml+xml"/>
+        <item id="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-11.html"
+            href="Otprpnr42 2002-2003 Om lov om endringer i skatteloven mm-11.html"
+            media-type="application/xhtml+xml"/>
+        <item id="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-12.html"
+            href="Otprpnr42 2002-2003 Om lov om endringer i skatteloven mm-12.html"
+            media-type="application/xhtml+xml"/>
+        <item id="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-13.html"
+            href="Otprpnr42 2002-2003 Om lov om endringer i skatteloven mm-13.html"
+            media-type="application/xhtml+xml"/>
+        <item id="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-14.html"
+            href="Otprpnr42 2002-2003 Om lov om endringer i skatteloven mm-14.html"
+            media-type="application/xhtml+xml"/>
+        <item id="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-15.html"
+            href="Otprpnr42 2002-2003 Om lov om endringer i skatteloven mm-15.html"
+            media-type="application/xhtml+xml"/>
+        <item id="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-16.html"
+            href="Otprpnr42 2002-2003 Om lov om endringer i skatteloven mm-16.html"
+            media-type="application/xhtml+xml"/>
+        <item id="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-17.html"
+            href="Otprpnr42 2002-2003 Om lov om endringer i skatteloven mm-17.html"
+            media-type="application/xhtml+xml"/>
+        <item id="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-18.html"
+            href="Otprpnr42 2002-2003 Om lov om endringer i skatteloven mm-18.html"
+            media-type="application/xhtml+xml"/>
+        <item id="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-19.html"
+            href="Otprpnr42 2002-2003 Om lov om endringer i skatteloven mm-19.html"
+            media-type="application/xhtml+xml"/>
+        <item id="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-20.html"
+            href="Otprpnr42 2002-2003 Om lov om endringer i skatteloven mm-20.html"
+            media-type="application/xhtml+xml"/>
+        <item id="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-21.html"
+            href="Otprpnr42 2002-2003 Om lov om endringer i skatteloven mm-21.html"
+            media-type="application/xhtml+xml"/>
+        <item id="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-22.html"
+            href="Otprpnr42 2002-2003 Om lov om endringer i skatteloven mm-22.html"
+            media-type="application/xhtml+xml"/>
+        <item id="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-23.html"
+            href="Otprpnr42 2002-2003 Om lov om endringer i skatteloven mm-23.html"
+            media-type="application/xhtml+xml"/>
+        <item id="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-24.html"
+            href="Otprpnr42 2002-2003 Om lov om endringer i skatteloven mm-24.html"
+            media-type="application/xhtml+xml"/>
+        <item id="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-25.html"
+            href="Otprpnr42 2002-2003 Om lov om endringer i skatteloven mm-25.html"
+            media-type="application/xhtml+xml"/>
+        <item id="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-26.html"
+            href="Otprpnr42 2002-2003 Om lov om endringer i skatteloven mm-26.html"
+            media-type="application/xhtml+xml"/>
+        <item id="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-27.html"
+            href="Otprpnr42 2002-2003 Om lov om endringer i skatteloven mm-27.html"
+            media-type="application/xhtml+xml"/>
+        <item id="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-28.html"
+            href="Otprpnr42 2002-2003 Om lov om endringer i skatteloven mm-28.html"
+            media-type="application/xhtml+xml"/>
+        <item id="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-29.html"
+            href="Otprpnr42 2002-2003 Om lov om endringer i skatteloven mm-29.html"
+            media-type="application/xhtml+xml"/>
+        <item id="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-30.html"
+            href="Otprpnr42 2002-2003 Om lov om endringer i skatteloven mm-30.html"
+            media-type="application/xhtml+xml"/>
+    </manifest>
+    <spine toc="ncx">
+        <itemref idref="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm.html"/>
+        <itemref idref="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-01.html"/>
+        <itemref idref="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-02.html"/>
+        <itemref idref="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-03.html"/>
+        <itemref idref="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-04.html"/>
+        <itemref idref="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-05.html"/>
+        <itemref idref="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-06.html"/>
+        <itemref idref="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-07.html"/>
+        <itemref idref="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-08.html"/>
+        <itemref idref="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-09.html"/>
+        <itemref idref="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-10.html"/>
+        <itemref idref="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-11.html"/>
+        <itemref idref="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-12.html"/>
+        <itemref idref="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-13.html"/>
+        <itemref idref="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-14.html"/>
+        <itemref idref="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-15.html"/>
+        <itemref idref="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-16.html"/>
+        <itemref idref="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-17.html"/>
+        <itemref idref="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-18.html"/>
+        <itemref idref="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-19.html"/>
+        <itemref idref="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-20.html"/>
+        <itemref idref="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-21.html"/>
+        <itemref idref="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-22.html"/>
+        <itemref idref="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-23.html"/>
+        <itemref idref="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-24.html"/>
+        <itemref idref="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-25.html"/>
+        <itemref idref="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-26.html"/>
+        <itemref idref="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-27.html"/>
+        <itemref idref="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-28.html"/>
+        <itemref idref="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-29.html"/>
+        <itemref idref="Otprpnr42_2002-2003_Om_lov_om_endringer_i_skatteloven_mm-30.html"/>
+    </spine>
+</package>
