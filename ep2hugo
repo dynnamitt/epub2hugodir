@@ -5,9 +5,11 @@
 # -------------------------------
 EP_CONT=META-INF/container.xml
 HUGO_CONF=config.toml
+NAMES_MAP=names-map.xml
 
 DEF_XPATH_DRAFT=
 DEF_CONTENT_DIRNAME=_content
+DEF_PUBLIC_DIRNAME=_public
 
 
 # ------------------------
@@ -79,6 +81,7 @@ xsl_doc(){
     _omit_decl=yes
   else
     _omit_decl=no
+    _indent='indent="yes"'
   fi
   shift
   cat << _EOF
@@ -90,7 +93,7 @@ xsl_doc(){
  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
  exclude-result-prefixes="ncx strings cont opf">
  <xsl:output method="$_method" encoding="utf-8" 
-    omit-xml-declaration="$_omit_decl"/>
+    omit-xml-declaration="$_omit_decl" $_indent/>
 $@
 </xsl:stylesheet>
 _EOF
@@ -99,11 +102,12 @@ _EOF
 # ----------------------------------
 # func: helper xslt grunt
 #
-# xslt local-xslt-func input-xml
+# xsl local-xslt-func input-xml
 # ----------------------------------
 xsl(){
   _xsl_tmp=$(mktemp /tmp/ep2hugo_XXXXXX.xsl)
-  $1 > "$_xsl_tmp"
+  _xsl_func=$1
+  $_xsl_func > "$_xsl_tmp"
   xsltproc "$_xsl_tmp" "$2"
 }
 
@@ -170,17 +174,43 @@ _toc_path(){
 
 # --------------------------------------------------
 # func: default names-map xslt, not used if -r set
+# HUGO will not RECOGNIZE .xhtm* ext.. so adjust to .htm*
+#
+#  inputdoc == package/opf
+#
+#  _names_map_from_opf
+# --------------------------------------------------
+_names_map_from_opf(){
+  xsl_doc xml $(xsl_templ "/opf:package" \
+    "<contents>" \
+    "  <xsl:apply-templates select=\"//opf:item\"/>" \
+    "</contents>" ) \
+    $(xsl_templ "opf:item[@media-type='application/xhtml+xml']" \
+    "<content>" \
+    "  <src>" \
+    "    <xsl:value-of select=\"@href\"/>" \
+    "  </src>" \
+    "  <dest>" \
+    "    <xsl:value-of select=\"strings:replace(@href,'.xhtm','.htm')\"/>" \
+    "  </dest>" \
+    "</content>" )
+ }
+ 
+# --------------------------------------------------
+# func: names-map xslt via NCX.. will give DUPL
+# NCX has frontmatter data like label/text aka title
+# HUGO will not RECOGNIZE .xhtm* ext.. so adjust to .htm*
 #
 #  inputdoc == daisy/ncx
 #
-#  _names_map
+#  _names_map_from_ncx
 # --------------------------------------------------
 _names_map_from_ncx(){
   xsl_doc xml $(xsl_templ "/" \
     "<contents>" \
     "  <xsl:apply-templates select=\"//ncx:content/@src\"/>" \
     "</contents>" ) \
-    $(xsl_templ "//ncx:content/@src" \
+    $(xsl_templ "ncx:content/@src" \
     "<xsl:variable name=\"fname\">" \
     "  <xsl:value-of select=\"strings:split(.,'#')[1]\"/>" \
     "</xsl:variable>" \
@@ -193,6 +223,7 @@ _names_map_from_ncx(){
     "  </dest>" \
     "</content>" )
  }
+
 
 
 # =============================================
@@ -229,8 +260,8 @@ alias realpath="readlink -f"
 EPUB=$1
 test -z "$EPUB" && usage "epubfile empty"
 
-HUGODIR=${2:-$(dirname "$EPUB")}
-test -z "$HUGODIR" && usage "destdir empty"
+HUGO_DIR=${2:-$(dirname "$EPUB")}
+test -z "$HUGO_DIR" && usage "destdir empty"
 
 CONTENT_DIRNAME=${DEF_CONTENT_DIRNAME}
 
@@ -239,7 +270,7 @@ CONTENT_DIRNAME=${DEF_CONTENT_DIRNAME}
 # is DEST = SRC ? just warn
 # ---------------------------
 ep_dir=$(realpath $(dirname $EPUB))
-if test "$ep_dir" = $(realpath "$HUGODIR")
+if test "$ep_dir" = $(realpath "$HUGO_DIR")
 then 
   echo >&2 "! NB, destdir same as EPUB location"
 fi
@@ -269,42 +300,55 @@ fi
 # -----------------------------------
 # Move+transform content into destdir
 # -----------------------------------
-path_chk_warn $HUGODIR
+path_chk_warn $HUGO_DIR
 
-CONTENT_DIR=$HUGODIR/$CONTENT_DIRNAME
+CONTENT_DIR=$HUGO_DIR/$CONTENT_DIRNAME
 mkdir -p $CONTENT_DIR
 
 EP_OPF_PATH=$(xsl _rootfile_path "$EPUB_SRC/$EP_CONT")
+EP_ROOT_DIR=$(dirname "$EP_OPF_PATH")
 echo "* Packagefile rel path is '$EP_OPF_PATH'"
 
-EP_NCX_PATH=$(xsl _ncx_path "$EPUB_SRC/$EP_OPF_PATH")
+# -------------------------------
+#  locate TOC xml-doc(s)
+# -------------------------------
+EP_NCX_HREF=$(xsl _ncx_path "$EPUB_SRC/$EP_OPF_PATH")
 
-if test -z "$EP_NCX_PATH"; then
+if test -z "$EP_NCX_HREF"; then
   printf "! NCX not found, searching for xhtml-toc..."
-  EP_XHTOC_PATH=$(xsl _toc_path "$EPUB_SRC/$EP_OPF_PATH")
-  if test -z "$EP_XHTOC_PATH"; then
+  EP_XHTOC_HREF=$(xsl _toc_path "$EPUB_SRC/$EP_OPF_PATH")
+  if test -z "$EP_XHTOC_HREF"; then
     echo "NOT FOUND, aborting!"
     exit 1
   else
+    EP_XHTOC_PATH=$EP_ROOT_DIR/$EP_XHTOC_HREF
     echo " '$EP_XHTOC_PATH'"
+    echo "- making NCX..."
+    echo "    NOT IMPL!"
+    exit 1
   fi
 else
-  echo "* NCX rel path is '$EP_OPF_PATH'"
+  EP_NCX_PATH=$EP_ROOT_DIR/$EP_NCX_HREF
+  echo "* NCX rel path is '$EP_NCX_PATH'"
 fi
 
+# TODO; use custom xsl via -r option
+echo "NB, -r not impl yet.........."
+
+# -------------------------------------------
+#   names-map.xml
+# --------------------------------------------
+printf "* generating '$HUGO_DIR/$NAMES_MAP'..."
+$(xsl _names_map_from_opf "$EPUB_SRC/$EP_OPF_PATH" > "$HUGO_DIR/$NAMES_MAP")
+echo ok
+
+# fix cross-hrefs inside all docs
+
 # # config.toml
-printf "* Writing '$HUGODIR/$HUGO_CONF'..."
-cat << _EOF > "$HUGODIR/$HUGO_CONF"
+printf "* Writing '$HUGO_DIR/$HUGO_CONF'..."
+cat << _EOF > "$HUGO_DIR/$HUGO_CONF"
 contentdir = "$(dirname $EP_OPF_PATH)/$CONTENT_DIRNAME"
 _EOF
 echo "ok"
 
-echo "--------ENDE of sequencial code"
-
-for f in "$EPUB_SRC"/*
-do
-  _f=$(echo $f| tr ' ' '+')
-  printf "* Copying $(basename $f) to $(basename $_f)..."
-  echo ok
-done
-echo "ok"
+printf "* Each contentfile will.."
