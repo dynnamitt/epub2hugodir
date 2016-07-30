@@ -131,6 +131,7 @@ xsl_templ(){
 # func: xslt that find epub-package path
 #
 #  inputdoc == oasis/container
+#  output string
 # -------------------------------------------------
 _rootfile_path(){
   # first template is GRUNT to avoid 2 newlines
@@ -144,8 +145,9 @@ _rootfile_path(){
 # func: xslt that find ncx href (if in OPF)
 #
 #   inputdoc = 'package' aka 'opf' aka 'rootfile'
+#   output string
 # -------------------------------------------------
-_ncx_path(){
+_ncx_href(){
   # first template is GRUNT to avoid 2 newlines
   xsl_doc text $(xsl_templ "/" \
     "<xsl:apply-templates select=\"//opf:item\" />") \
@@ -157,8 +159,9 @@ _ncx_path(){
 # func: xslt that find ep3-xh-toc href
 #
 #   inputdoc = 'package' aka 'opf' aka 'rootfile'
+#   output string
 # -------------------------------------------------
-_toc_path(){
+_toc_href(){
   # first template is GRUNT to avoid 2 newlines
   xsl_doc text $(xsl_templ "/" \
     "<xsl:apply-templates select=\"//opf:item\" />") \
@@ -171,65 +174,15 @@ _toc_path(){
 # HUGO will not RECOGNIZE .xhtm* ext.. so adjust to .htm*
 #
 #  inputdoc == package/opf
+#  output text
 # --------------------------------------------------
-_names_map_from_opf(){
-  xsl_doc xml $(xsl_templ "/opf:package" \
-    "<contents>" \
-    "  <xsl:apply-templates select=\"//opf:item\"/>" \
-    "</contents>" ) \
+_xhtml_hrefs(){
+  xsl_doc text $(xsl_templ "/opf:package" \
+    "<xsl:apply-templates select=\"//opf:item\"/>" ) \
     $(xsl_templ "opf:item[@media-type='application/xhtml+xml']" \
-    "<content>" \
-    "  <src>" \
-    "    <xsl:value-of select=\"@href\"/>" \
-    "  </src>" \
-    "  <dest>" \
-    "    <xsl:value-of select=\"strings:replace(@href,'.xhtm','.htm')\"/>" \
-    "  </dest>" \
-    "</content>" )
+    "<xsl:value-of select=\"@href\"/><xsl:text>&#xA;</xsl:text>" )
  }
  
-# --------------------------------------------------
-# func: names-map xslt via NCX.. will give DUPL
-# NCX has frontmatter data like label/text aka title
-# HUGO will not RECOGNIZE .xhtm* ext.. so adjust to .htm*
-#
-#  inputdoc == daisy/ncx
-# --------------------------------------------------
-_names_map_from_ncx(){
-  xsl_doc xml $(xsl_templ "/" \
-    "<contents>" \
-    "  <xsl:apply-templates select=\"//ncx:content/@src\"/>" \
-    "</contents>" ) \
-    $(xsl_templ "ncx:content/@src" \
-    "<xsl:variable name=\"fname\">" \
-    "  <xsl:value-of select=\"strings:split(.,'#')[1]\"/>" \
-    "</xsl:variable>" \
-    "<content>" \
-    "  <src>" \
-    "    <xsl:value-of select=\"\$fname\"/>" \
-    "  </src>" \
-    "  <dest>" \
-    "    <xsl:value-of select=\"strings:replace(\$fname,'.xhtm','.htm')\"/>" \
-    "  </dest>" \
-    "</content>" )
- }
-
-# -------------------------------------------
-# func: xslt script,
-#    names-map.xml into UNIX txt database
-# 
-# inputdoc == $NAMES_MAP aka names-map.xml
-# -------------------------------------------
-_name_rows(){
-   xsl_doc text $(xsl_templ "/contents" \
-     "<xsl:apply-templates select=\"content\"/>" ) \
-     $(xsl_templ "content" \
-     "<xsl:value-of select=\"src\"/>" \
-     "<xsl:text> </xsl:text>" \
-     "<xsl:value-of select=\"dest\"/>"\
-     "<xsl:text>&#xA;</xsl:text>")
-}
-
 
 # =============================================
 #                         _       
@@ -318,11 +271,11 @@ echo "* Packagefile rel path is '$EP_OPF_PATH'"
 # -------------------------------
 #  locate TOC xml-doc(s)
 # -------------------------------
-EP_NCX_HREF=$(xsl _ncx_path "$EPUB_SRC/$EP_OPF_PATH")
+EP_NCX_HREF=$(xsl _ncx_href "$EPUB_SRC/$EP_OPF_PATH")
 
 if test -z "$EP_NCX_HREF"; then
   printf "! NCX not found, searching for xhtml-toc..."
-  EP_XHTOC_HREF=$(xsl _toc_path "$EPUB_SRC/$EP_OPF_PATH")
+  EP_XHTOC_HREF=$(xsl _toc_href "$EPUB_SRC/$EP_OPF_PATH")
   if test -z "$EP_XHTOC_HREF"; then
     echo "NOT FOUND, aborting!"
     exit 1
@@ -338,29 +291,12 @@ else
   echo "* NCX rel path is '$EP_NCX_PATH'"
 fi
 
-# TODO; use custom xsl via -r option
-echo "NB, -r not impl yet.........."
-
-# -------------------------------------------
-#   name-map.{xml|txt}
-# --------------------------------------------
-printf "* Generating '$HUGO_DIR/$NAME_MAP'..."
-$(xsl _names_map_from_opf "$EPUB_SRC/$EP_OPF_PATH" > "$HUGO_DIR/$NAME_MAP")
-echo ok
-
-_tmp_jobs_file=$(mktemp /tmp/name_map_XXXXX.txt)
-printf "* Generating '$_tmp_jobs_file' UNIX db..."
-$(xsl _name_rows "$HUGO_DIR/$NAME_MAP" > "$_tmp_jobs_file" )
-echo ok
-
-
-# # config.toml
+# config.toml
 printf "* Writing '$HUGO_DIR/$HUGO_CONF'..."
 cat << _EOF > "$HUGO_DIR/$HUGO_CONF"
 contentdir = "$(dirname $EP_OPF_PATH)/$CONTENT_DIRNAME"
 _EOF
 echo "ok"
 
-echo "* concurrent mapping of content file(s)...'$_tmp_jobs_file'..."
-echo
-echo TODO
+echo "* Concurrent mapping of content file(s)..."
+xsl _xhtml_hrefs "$EPUB_SRC/$EP_OPF_PATH"
