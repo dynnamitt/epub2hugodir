@@ -8,7 +8,6 @@
 # -------------------------------
 EP_CONT=META-INF/container.xml
 HUGO_CONF=config.toml
-NAME_MAP=name-map.xml
 
 DEF_XPATH_DRAFT=
 DEF_CONTENT_DIRNAME=_content
@@ -31,7 +30,6 @@ usage() {
   echo Flags:
   echo "  -d string     Xpath marking content chunk as draft. Default empty"
   echo "  -c string     Contentdir name. Default is '_content'"
-  echo "  -r path       Custom xslt script generating the name-map.xml"
 
   echo
   echo "!! Error: '$1'"
@@ -287,7 +285,7 @@ if test -z "$EP_NCX_HREF"; then
     exit 1
   fi
 else
-  EP_NCX_PATH=$EP_ROOT_DIR/$EP_NCX_HREF
+  EP_NCX_PATH=$EP_ROOT_DIR/$EP_NCX
   echo "* NCX rel path is '$EP_NCX_PATH'"
 fi
 
@@ -296,7 +294,12 @@ printf "* Writing '$HUGO_DIR/$HUGO_CONF'..."
 cat << _EOF > "$HUGO_DIR/$HUGO_CONF"
 contentdir = "$(dirname $EP_OPF_PATH)/$CONTENT_DIRNAME"
 _EOF
-echo "ok"
+echo ok
+
+xhtml_pipe(){
+  echo >&2 "href $@ :"
+}
 
 echo "* Concurrent mapping of content file(s)..."
-xsl _xhtml_hrefs "$EPUB_SRC/$EP_OPF_PATH"
+xsl _xhtml_hrefs "$EPUB_SRC/$EP_OPF_PATH" \
+  | parallel $(xhtml_pipe)
