@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 #  uncomment below to trace 
 #  set -x
@@ -78,27 +78,40 @@ path_chk_warn(){
 # ------------------------------------------------
 xsl_doc(){
   _method=$1
+  _xh_ns='http://www.w3.org/1999/xhtml'
+  _indent='indent="yes"'
+
   if test "$_method" = "text"; then
     _omit_decl=yes
+    _indent='indent="no"'
+  elif test "$_method" = "xhtml"; then
+    _omit_decl=yes
+    _def_ns="xmlns=\"$_xh_ns\""
+    _method=xml
   else
     _omit_decl=no
-    _indent='indent="yes"'
   fi
   shift
   cat << _EOF
-<xsl:stylesheet version="1.0" 
+<xsl:stylesheet version="1.0" $_def_ns
+ xmlns:xh="$_xh_ns"
  xmlns:cont="urn:oasis:names:tc:opendocument:xmlns:container"
  xmlns:ncx="http://www.daisy.org/z3986/2005/ncx/"
  xmlns:opf="http://www.idpf.org/2007/opf"
  xmlns:strings="http://exslt.org/strings"
+ xmlns:epub="http://www.idpf.org/2007/ops"
+ xmlns:epvoc="http://idpf.org/epub/vocab/structure/"
+ xmlns:dsct="http://readin.no/epub/custom-type/#"
+ xmlns:z3998="http://www.daisy.org/z3998/2012/vocab/structure/#"
  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
- exclude-result-prefixes="ncx strings cont opf">
+ exclude-result-prefixes="ncx strings cont opf epub dsct z3998 epvoc">
  <xsl:output method="$_method" encoding="utf-8" 
     omit-xml-declaration="$_omit_decl" $_indent/>
 $@
 </xsl:stylesheet>
 _EOF
 }
+export -f xsl_doc # bashism !!
 
 # ----------------------------------
 # func: helper xslt grunt
@@ -109,13 +122,14 @@ xsl(){
   _xsl_tmp=$(mktemp /tmp/ep2hugo_XXXXXX.xsl)
   _xsl_func=$1
   $_xsl_func > "$_xsl_tmp"
-  xsltproc "$_xsl_tmp" "$2"
+  xsltproc --novalid "$_xsl_tmp" "$2"
 }
+export -f xsl # bashism !!
 
 # -------------------------------------------------------
 # func: wrap args in xslt:templ-tag
 #
-#  xslt_templ "match-expr" "xslt-expr1" "xslt-expr2" .. 
+#  xsl_templ "match-expr" "xslt-expr1" "xslt-expr2" .. 
 # -------------------------------------------------------
 xsl_templ(){
   _MATCH=$1
@@ -124,6 +138,18 @@ xsl_templ(){
   printf "<xsl:template match=\"${_MATCH}\">"
   printf "${_EXPRS}</xsl:template>"
 }
+export -f xsl_templ # bashism !!
+
+# -----------------------------------
+# func: usefull xsl_templ everywhere
+# -----------------------------------
+copy_templ(){
+  xsl_templ "node()|@*" \
+    "<xsl:copy>" \
+    "<xsl:apply-templates select=\"@*|node()\"/>" \
+    "</xsl:copy>"
+}
+export -f copy_templ # bashism !!
 
 # -------------------------------------------------
 # func: xslt that find epub-package path
@@ -180,6 +206,56 @@ _xhtml_hrefs(){
     $(xsl_templ "opf:item[@media-type='application/xhtml+xml']" \
     "<xsl:value-of select=\"@href\"/><xsl:text>&#xA;</xsl:text>" )
  }
+
+# ---------------------------------------------
+# func: move ep3::attr into class as extra val
+#
+#   inputdoc == xhtml5+epub3
+#   output xhtml5(no epub3)
+# --------------------------------------------
+_clean_ep_type(){
+  _sep=+
+  xsl_doc xhtml $(copy_templ) \
+    $(xsl_templ "@epub:prefix") \
+    $(xsl_templ "*[@epub:type]" \
+      "<xsl:variable name=\"types-cnt\" " \
+      " select=\"count(strings:split(@epub:type, ' '))\" />" \
+      "<xsl:copy>" \
+      " <xsl:apply-templates " \
+      "   select=\"@*[local-name(.) != 'type' and name(.) != 'class']\"/>" \
+      "   <xsl:attribute name=\"class\">" \
+      "     <xsl:if test=\"@class\">" \
+      "       <xsl:value-of select=\"@class\"/>" \
+      "       <xsl:text> </xsl:text>" \
+      "     </xsl:if>" \
+      "     <xsl:for-each select=\"strings:split(@epub:type, ' ')\">" \
+      "       <xsl:value-of " \
+      "        select=\"concat('et','$_sep',strings:replace(.,':','$_sep'))\"/>" \
+      "       <xsl:if test=\"not(position() = \$types-cnt)\">" \
+      "         <xsl:text> </xsl:text>" \
+      "       </xsl:if>" \
+      "     </xsl:for-each>" \
+      "   </xsl:attribute>" \
+      " <xsl:apply-templates " \
+      "  select=\"node() | processing-instruction()\"/>" \
+      "</xsl:copy>" )
+}
+export -f _clean_ep_type # bashism !!
+
+# ----------------------------------
+# func: gets rid of html+body elems
+#   (and PI's just for the hekl)
+#
+#  inputdoc == xhtml5
+#  output xhtml5
+# -----------------------------------
+_just_body(){
+  xsl_doc xhtml $(xsl_templ "/" \
+    "<xsl:apply-templates select=\"/xh:html/xh:body/*\" />" ) \
+    $(xsl_templ "processing-instruction()") \
+    $(copy_templ) 
+}
+export -f _just_body
  
 
 # =============================================
@@ -285,7 +361,7 @@ if test -z "$EP_NCX_HREF"; then
     exit 1
   fi
 else
-  EP_NCX_PATH=$EP_ROOT_DIR/$EP_NCX
+  EP_NCX_PATH=$EP_ROOT_DIR/$EP_NCX_HREF
   echo "* NCX rel path is '$EP_NCX_PATH'"
 fi
 
@@ -294,12 +370,23 @@ printf "* Writing '$HUGO_DIR/$HUGO_CONF'..."
 cat << _EOF > "$HUGO_DIR/$HUGO_CONF"
 contentdir = "$(dirname $EP_OPF_PATH)/$CONTENT_DIRNAME"
 _EOF
-echo ok
+echo "ok"
 
+# -----------------------------------------
+# exported func: pipeline for each content
+# -----------------------------------------
+export _src=$EPUB_SRC/$EP_ROOT_DIR
+export _dest=$HUGO_DIR/$CONTENT_DIRNAME
 xhtml_pipe(){
-  echo >&2 "href $@ :"
+  printf " >∙>∙ '$1' ..."
+  xsl _clean_ep_type "$_src/$1" \
+    | xsl _just_body  /dev/stdin > "$_dest/$1"
+  echo ok
 }
+export -f xhtml_pipe # bashism !!
+
+echo $(_just_body)
 
 echo "* Concurrent mapping of content file(s)..."
 xsl _xhtml_hrefs "$EPUB_SRC/$EP_OPF_PATH" \
-  | parallel $(xhtml_pipe)
+  | parallel --no-notice xhtml_pipe {}
