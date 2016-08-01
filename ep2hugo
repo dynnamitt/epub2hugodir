@@ -256,6 +256,20 @@ _just_body(){
     $(copy_templ) 
 }
 export -f _just_body #bashism !!
+
+# --------------------------------
+# func: yaml of xh head metadata
+#
+#   inputdoc == xhtml5
+#   output yaml (text)
+# --------------------------------
+_just_head_meta(){
+  xsl_doc text $(xsl_templ "/" \
+    "<xsl:apply-templates select=\"/xh:html/xh:head/*\" />" ) \
+    $(xsl_templ "title" "<xsl:text>title : </xsl:text>" \
+      "<xsl:value-of select=\".\" />")
+}
+export -f _just_head_meta # bashism !!
  
 
 # =============================================
@@ -377,7 +391,9 @@ echo "ok"
 # ------------------
 frontmatter(){
   echo "---"
-  echo "title: \"$1\""
+  xsl _just_head_meta $1
+  # TODO fetch also from TOC/NCX
+  # TODO bc, prev, next
   echo "---"
 }
 export -f frontmatter
@@ -391,7 +407,7 @@ xhtml_pipe(){
   printf " >∙>∙ '$1' ..."
   xsl _clean_ep_type "$_src/$1" \
     | xsl _just_body /dev/stdin \
-    | ( frontmatter "testing"; cat /dev/stdin ) \
+    | ( frontmatter "$_src/$1" ; cat /dev/stdin ) \
     > "$_dest/$1"
   echo ok
 }
