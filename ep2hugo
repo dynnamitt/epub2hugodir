@@ -368,24 +368,33 @@ fi
 # config.toml
 printf "* Writing '$HUGO_DIR/$HUGO_CONF'..."
 cat << _EOF > "$HUGO_DIR/$HUGO_CONF"
-contentdir = "$(dirname $EP_OPF_PATH)/$CONTENT_DIRNAME"
+contentdir = "$CONTENT_DIRNAME"
 _EOF
 echo "ok"
 
+# ------------------
+# func: frontmatter
+# ------------------
+frontmatter(){
+  echo "---"
+  echo "title: \"$1\""
+  echo "---"
+}
+export -f frontmatter
+
 # -----------------------------------------
-# exported func: pipeline for each content
+# func: pipeline for each content
 # -----------------------------------------
 export _src=$EPUB_SRC/$EP_ROOT_DIR
 export _dest=$HUGO_DIR/$CONTENT_DIRNAME
 xhtml_pipe(){
   printf " >∙>∙ '$1' ..."
   xsl _clean_ep_type "$_src/$1" \
-    | xsl _just_body  /dev/stdin > "$_dest/$1"
+    | xsl _just_body /dev/stdin \
+    | ( frontmatter "testing"; cat /dev/stdin ) > "$_dest/$1"
   echo ok
 }
 export -f xhtml_pipe # bashism !!
-
-echo $(_just_body)
 
 echo "* Concurrent mapping of content file(s)..."
 xsl _xhtml_hrefs "$EPUB_SRC/$EP_OPF_PATH" \
