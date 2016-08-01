@@ -296,8 +296,6 @@ have_cmd xsltproc
 have_cmd parallel
 echo "ok"
 
-alias realpath="readlink -f"
-
 # -----------------------------
 # collect args if any
 # -----------------------------
@@ -316,8 +314,8 @@ CONTENT_DIRNAME=${DEF_CONTENT_DIRNAME}
 # ---------------------------
 # is DEST = SRC ? just warn
 # ---------------------------
-ep_dir=$(realpath $(dirname $EPUB))
-if test "$ep_dir" = $(realpath "$HUGO_DIR")
+ep_dir=$(readlink -f $(dirname $EPUB))
+if test "$ep_dir" = $(readlink -f "$HUGO_DIR")
 then 
   echo >&2 "! NB, destdir same as EPUB location"
 fi
