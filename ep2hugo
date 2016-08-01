@@ -255,7 +255,7 @@ _just_body(){
     $(xsl_templ "processing-instruction()") \
     $(copy_templ) 
 }
-export -f _just_body
+export -f _just_body #bashism !!
  
 
 # =============================================
@@ -383,7 +383,7 @@ frontmatter(){
 export -f frontmatter
 
 # -----------------------------------------
-# func: pipeline for each content
+# func: pipeline for each content dest
 # -----------------------------------------
 export _src=$EPUB_SRC/$EP_ROOT_DIR
 export _dest=$HUGO_DIR/$CONTENT_DIRNAME
@@ -391,7 +391,8 @@ xhtml_pipe(){
   printf " >∙>∙ '$1' ..."
   xsl _clean_ep_type "$_src/$1" \
     | xsl _just_body /dev/stdin \
-    | ( frontmatter "testing"; cat /dev/stdin ) > "$_dest/$1"
+    | ( frontmatter "testing"; cat /dev/stdin ) \
+    > "$_dest/$1"
   echo ok
 }
 export -f xhtml_pipe # bashism !!
