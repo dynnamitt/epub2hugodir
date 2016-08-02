@@ -269,6 +269,11 @@ _just_head_meta(){
     $(xsl_templ "xh:title" \
       "<xsl:text>title : \"</xsl:text>" \
       "<xsl:value-of select=\".\" />" \
+      "<xsl:text>\"</xsl:text>" ) \
+    $(xsl_templ "xh:meta[@content]" \
+      "<xsl:value-of select=\"@name\"/>" \
+      "<xsl:text> : \"</xsl:text>" \
+      "<xsl:value-of select=\"@content\" />" \
       "<xsl:text>\"</xsl:text>" )
 }
 export -f _just_head_meta # bashism !!
@@ -282,8 +287,6 @@ export -f _just_head_meta # bashism !!
 # 
 
 set -e # DIE fast 
-           
-echo $(_just_head_meta)
 
 # ----------------------
 # commands validation
