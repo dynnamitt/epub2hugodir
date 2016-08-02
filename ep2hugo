@@ -266,11 +266,12 @@ export -f _just_body #bashism !!
 _just_head_meta(){
   xsl_doc text $(xsl_templ "/" \
     "<xsl:apply-templates select=\"/xh:html/xh:head/*\" />" ) \
-    $(xsl_templ "title" "<xsl:text>title : </xsl:text>" \
-      "<xsl:value-of select=\".\" />")
+    $(xsl_templ "xh:title" \
+      "<xsl:text>title : \"</xsl:text>" \
+      "<xsl:value-of select=\".\" />" \
+      "<xsl:text>\"</xsl:text>" )
 }
 export -f _just_head_meta # bashism !!
- 
 
 # =============================================
 #                         _       
@@ -282,7 +283,7 @@ export -f _just_head_meta # bashism !!
 
 set -e # DIE fast 
            
-
+echo $(_just_head_meta)
 
 # ----------------------
 # commands validation
@@ -389,9 +390,10 @@ echo "ok"
 # ------------------
 frontmatter(){
   echo "---"
-  xsl _just_head_meta $1
+  xsl _just_head_meta "$1"
   # TODO fetch also from TOC/NCX
   # TODO bc, prev, next
+  echo
   echo "---"
 }
 export -f frontmatter
