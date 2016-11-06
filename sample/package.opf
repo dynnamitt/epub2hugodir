@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://www.idpf.org/2007/opf"
+         xmlns:dc="http://purl.org/dc/elements/1.1/"
+         xmlns:dcterms="http://purl.org/dc/terms/"
+         unique-identifier="pub-identifier"
+         version="3.0"
+         xml:lang="en">
+  <metadata>
+      <dc:identifier id="pub-identifier">_id491327</dc:identifier>
+      <meta id="meta-identifier" property="dcterms:identifier">_id491327</meta>
+      <dc:title>TEK10</dc:title>
+      <meta id="meta-title" property="dcterms:title">TEK10</meta>
+      <dc:language>en</dc:language>
+      <meta id="meta-language" property="dcterms:language">no</meta>
+      <meta property="dcterms:modified">2014-10-10T09:45:10Z</meta>
+      <meta name="ds.ctrl.profile" content="uber/epvoc"/>
+		    <meta name="ds.href.access" content=""/>
+      <!--The preceding date value is actually local time (not UTC)
+           in UTC format because there is no function in XSLT 1.0 to generate a correct UTC time-->
+  </metadata>
+  <manifest>
+      <item href="toc.xhtml"
+            id="htmltoc"
+            media-type="application/xhtml+xml"
+            properties="nav"/>
+  
+        <r:item xmlns:r="http://www.idpf.org/2007/opf"
+                href="d8d4430c.xhtml"
+                id="d8d4430c"
+              media-type="application/xhtml+xml"
+              properties="free"/>
+         
+
+      <item href="reading.jpg" id="readinglogo" media-type="image/png"/>
+
+
+   </manifest>
+   <r:spine xmlns:r="http://www.idpf.org/2007/opf" toc="ncx">
+           <r:itemref idref="d8d4430c"/>
+   </r:spine>
+   
+   
+   
+   
+  
+</package>
