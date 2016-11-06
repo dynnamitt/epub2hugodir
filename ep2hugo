@@ -17,6 +17,8 @@ DEF_CONTENT_DIRNAME=_content
 DEF_PUBLIC_DIRNAME=_public
 
 TOOL_DIR=$(dirname $0)
+export TOOL_DIR
+
 
 # ------------------------
 # func: help then exit
@@ -180,40 +182,15 @@ xh_hrefs(){
   xsltproc --stringparam Q XHTMLS "$TOOL_DIR/xsl/ctrl_hrefs.xsl" "$1"
 }
 
-# ---------------------------------------------
-# func: move ep3::attr into class as extra val
-#
-#   inputdoc == xhtml5+epub3
-#   output xhtml5(no epub3)
-# --------------------------------------------
-_clean_ep_type(){
-  _sep=+
-  xsl_doc xhtml $(copy_templ) \
-    $(xsl_templ "@epub:prefix") \
-    $(xsl_templ "*[@epub:type]" \
-      "<xsl:variable name=\"types-cnt\" " \
-      " select=\"count(strings:split(@epub:type, ' '))\" />" \
-      "<xsl:copy>" \
-      " <xsl:apply-templates " \
-      "   select=\"@*[local-name(.) != 'type' and name(.) != 'class']\"/>" \
-      "   <xsl:attribute name=\"class\">" \
-      "     <xsl:if test=\"@class\">" \
-      "       <xsl:value-of select=\"@class\"/>" \
-      "       <xsl:text> </xsl:text>" \
-      "     </xsl:if>" \
-      "     <xsl:for-each select=\"strings:split(@epub:type, ' ')\">" \
-      "       <xsl:value-of " \
-      "        select=\"concat('et','$_sep',strings:replace(.,':','$_sep'))\"/>" \
-      "       <xsl:if test=\"not(position() = \$types-cnt)\">" \
-      "         <xsl:text> </xsl:text>" \
-      "       </xsl:if>" \
-      "     </xsl:for-each>" \
-      "   </xsl:attribute>" \
-      " <xsl:apply-templates " \
-      "  select=\"node() | processing-instruction()\"/>" \
-      "</xsl:copy>" )
+
+# purified_xhtml <XH_PATH>
+# output xml doc
+purified_xhtml(){
+  xsltproc --novalid "$TOOL_DIR/xsl/xh.xsl" "$1"
 }
-export -f _clean_ep_type # bashism !!
+export -f purified_xhtml
+
+
 
 # ----------------------------------
 # func: gets rid of html+body elems
@@ -384,7 +361,7 @@ export _src=$EPUB_SRC/$EP_ROOT_DIR
 export _dest=$HUGO_DIR/$CONTENT_DIRNAME
 xhtml_pipe(){
   printf " >∙>∙ '$1' ..."
-  xsl _clean_ep_type "$_src/$1" \
+  purified_xhtml "$_src/$1" \
     | xsl _just_body /dev/stdin \
     | ( frontmatter "$_src/$1" ; cat /dev/stdin ) \
     > "$_dest/$1"
