@@ -26,19 +26,17 @@ export TOOL_DIR
 #  usage "error-text"
 # ------------------------
 usage() {
-  echo
-  echo Usage:
-  echo "  $0 [flags] epubfile [destdir]"
-  echo
-  echo "  epubfile can be either epub-file OR extracted directory"
-  echo "  destdir default is basedir/root of epubfile"
-  echo
-  echo Flags:
-  echo "  -d string     Xpath marking content chunk as draft. Default empty"
-  echo "  -c string     Contentdir name. Default is '_content'"
-
-  echo
-  echo "!! Error: '$1'"
+  echo >&2 "FAILED: $1"
+  echo >&2
+  echo >&2 "Usage:"
+  echo >&2 "  $0 [flags] epubfile [destdir]"
+  echo >&2
+  echo >&2 "  epubfile can be either epub-file OR extracted directory"
+  echo >&2 "  destdir default is basedir/root of epubfile"
+  echo >&2
+  echo >&2 "Flags:"
+  echo >&2"  -d string     Xpath marking content chunk as draft. Default empty"
+  echo >&2 "  -c string     Contentdir name. Default is '_content'"
   exit 1
 
 }
@@ -241,17 +239,6 @@ export -f _just_head_meta # bashism !!
 # 
 
 
-# ----------------------
-# commands validation
-# ----------------------
-printf "* Checking availiable COMMANDs in system..."
-have_cmd getopts
-have_cmd grep
-have_cmd stat
-have_cmd readlink
-have_cmd xsltproc
-have_cmd parallel
-echo "ok"
 
 # -----------------------------
 # collect args if any
@@ -264,7 +251,7 @@ EPUB=$1
 test -z "$EPUB" && usage "epubfile empty"
 
 HUGO_DIR=${2:-$(dirname "$EPUB")}
-test -z "$HUGO_DIR" && usage "destdir empty"
+# test -z "$HUGO_DIR" && usage "destdir empty"
 
 CONTENT_DIRNAME=${DEF_CONTENT_DIRNAME}
 
@@ -276,6 +263,19 @@ if test "$ep_dir" = $(readlink -f "$HUGO_DIR")
 then 
   echo >&2 "! NB, destdir same as EPUB location"
 fi
+
+
+# ----------------------
+# commands validation
+# ----------------------
+printf "* Checking availiable COMMANDs in system..."
+have_cmd getopts
+have_cmd grep
+have_cmd stat
+have_cmd readlink
+have_cmd xsltproc
+have_cmd parallel
+echo "ok"
 
 # -----------------------------------
 # Check input variant (file or dir)
