@@ -1,4 +1,7 @@
 #!/bin/bash
+export SHELL=/bin/bash # parallel need this
+
+set -e
 
 #  uncomment below to trace 
 #  set -x
@@ -12,6 +15,9 @@ HUGO_CONF=config.toml
 DEF_XPATH_DRAFT=
 DEF_CONTENT_DIRNAME=_content
 DEF_PUBLIC_DIRNAME=_public
+
+TOOL_DIR=$(dirname $0)
+export TOOL_DIR
 
 
 # ------------------------
@@ -151,96 +157,40 @@ copy_templ(){
 }
 export -f copy_templ # bashism !!
 
-# -------------------------------------------------
-# func: xslt that find epub-package path
-#
-#  inputdoc == oasis/container
-#  output string
-# -------------------------------------------------
-_rootfile_path(){
-  # first template is GRUNT to avoid 2 newlines
-  xsl_doc text $(xsl_templ "/cont:container" \
-    "<xsl:apply-templates select=\"//cont:rootfile\" />") \
-    $(xsl_templ "//cont:rootfile[@media-type='application/oebps-package+xml']" \
-    "<xsl:value-of select=\"@full-path\"/>" )
+
+# rootfile_path <PATH_CONTAINER_XML>
+# output text
+rootfile_path(){
+    xsltproc "$TOOL_DIR/xsl/ctrl_hrefs.xsl" "$1"
 }
 
-# ---------------------------------------------
-# func: xslt that find ncx href (if in OPF)
-#
-#   inputdoc = 'package' aka 'opf' aka 'rootfile'
-#   output string
-# -------------------------------------------------
-_ncx_href(){
-  # first template is GRUNT to avoid 2 newlines
-  xsl_doc text $(xsl_templ "/" \
-    "<xsl:apply-templates select=\"//opf:item\" />") \
-    $(xsl_templ "//opf:item[@media-type='application/x-dtbncx+xml']" \
-    "<xsl:value-of select=\"@href\"/>" )
+# ncx_href <PATH_OPF>
+# output text
+ncx_href(){
+  xsltproc --stringparam Q NCX "$TOOL_DIR/xsl/ctrl_hrefs.xsl" "$1"
 }
 
-# ---------------------------------------------
-# func: xslt that find ep3-xh-toc href
-#
-#   inputdoc = 'package' aka 'opf' aka 'rootfile'
-#   output string
-# -------------------------------------------------
-_toc_href(){
-  # first template is GRUNT to avoid 2 newlines
-  xsl_doc text $(xsl_templ "/" \
-    "<xsl:apply-templates select=\"//opf:item\" />") \
-    $(xsl_templ "//opf:item[@properties='nav']" \
-    "<xsl:value-of select=\"@href\"/>" )
+# nav_href <PATH_OPF>
+# output text
+nav_href(){
+  xsltproc --stringparam Q NAV "$TOOL_DIR/xsl/ctrl_hrefs.xsl" "$1"
 }
 
-# --------------------------------------------------
-# func: default names-map xslt, not used if -r set
-# HUGO will not RECOGNIZE .xhtm* ext.. so adjust to .htm*
-#
-#  inputdoc == package/opf
-#  output text
-# --------------------------------------------------
-_xhtml_hrefs(){
-  xsl_doc text $(xsl_templ "/opf:package" \
-    "<xsl:apply-templates select=\"//opf:item\"/>" ) \
-    $(xsl_templ "opf:item[@media-type='application/xhtml+xml']" \
-    "<xsl:value-of select=\"@href\"/><xsl:text>&#xA;</xsl:text>" )
- }
-
-# ---------------------------------------------
-# func: move ep3::attr into class as extra val
-#
-#   inputdoc == xhtml5+epub3
-#   output xhtml5(no epub3)
-# --------------------------------------------
-_clean_ep_type(){
-  _sep=+
-  xsl_doc xhtml $(copy_templ) \
-    $(xsl_templ "@epub:prefix") \
-    $(xsl_templ "*[@epub:type]" \
-      "<xsl:variable name=\"types-cnt\" " \
-      " select=\"count(strings:split(@epub:type, ' '))\" />" \
-      "<xsl:copy>" \
-      " <xsl:apply-templates " \
-      "   select=\"@*[local-name(.) != 'type' and name(.) != 'class']\"/>" \
-      "   <xsl:attribute name=\"class\">" \
-      "     <xsl:if test=\"@class\">" \
-      "       <xsl:value-of select=\"@class\"/>" \
-      "       <xsl:text> </xsl:text>" \
-      "     </xsl:if>" \
-      "     <xsl:for-each select=\"strings:split(@epub:type, ' ')\">" \
-      "       <xsl:value-of " \
-      "        select=\"concat('et','$_sep',strings:replace(.,':','$_sep'))\"/>" \
-      "       <xsl:if test=\"not(position() = \$types-cnt)\">" \
-      "         <xsl:text> </xsl:text>" \
-      "       </xsl:if>" \
-      "     </xsl:for-each>" \
-      "   </xsl:attribute>" \
-      " <xsl:apply-templates " \
-      "  select=\"node() | processing-instruction()\"/>" \
-      "</xsl:copy>" )
+# xh_hrefs <PATH_OPF>
+# output text records
+xh_hrefs(){
+  xsltproc --stringparam Q XHTMLS "$TOOL_DIR/xsl/ctrl_hrefs.xsl" "$1"
 }
-export -f _clean_ep_type # bashism !!
+
+
+# purified_xhtml <XH_PATH>
+# output xml doc
+purified_xhtml(){
+  xsltproc --novalid "$TOOL_DIR/xsl/xh.xsl" "$1"
+}
+export -f purified_xhtml
+
+
 
 # ----------------------------------
 # func: gets rid of html+body elems
@@ -278,6 +228,10 @@ _just_head_meta(){
 }
 export -f _just_head_meta # bashism !!
 
+
+    
+    
+
 # =============================================
 #                         _       
 #         _ __ ___   __ _(_)_ __  
@@ -286,7 +240,6 @@ export -f _just_head_meta # bashism !!
 #        |_| |_| |_|\__,_|_|_| |_|
 # 
 
-set -e # DIE fast 
 
 # ----------------------
 # commands validation
@@ -354,14 +307,14 @@ path_chk_warn $HUGO_DIR
 CONTENT_DIR=$HUGO_DIR/$CONTENT_DIRNAME
 mkdir -p $CONTENT_DIR
 
-EP_OPF_PATH=$(xsl _rootfile_path "$EPUB_SRC/$EP_CONT")
+EP_OPF_PATH=$(rootfile_path "$EPUB_SRC/$EP_CONT")
 EP_ROOT_DIR=$(dirname "$EP_OPF_PATH")
 echo "* Packagefile rel path is '$EP_OPF_PATH'"
 
 # -------------------------------
 #  locate TOC xml-doc(s)
 # -------------------------------
-EP_NCX_HREF=$(xsl _ncx_href "$EPUB_SRC/$EP_OPF_PATH")
+EP_NCX_HREF=$(ncx_href "$EPUB_SRC/$EP_OPF_PATH")
 
 if test -z "$EP_NCX_HREF"; then
   printf "! NCX not found, searching for xhtml-toc..."
@@ -408,7 +361,7 @@ export _src=$EPUB_SRC/$EP_ROOT_DIR
 export _dest=$HUGO_DIR/$CONTENT_DIRNAME
 xhtml_pipe(){
   printf " >∙>∙ '$1' ..."
-  xsl _clean_ep_type "$_src/$1" \
+  purified_xhtml "$_src/$1" \
     | xsl _just_body /dev/stdin \
     | ( frontmatter "$_src/$1" ; cat /dev/stdin ) \
     > "$_dest/$1"
@@ -417,5 +370,5 @@ xhtml_pipe(){
 export -f xhtml_pipe # bashism !!
 
 echo "* Concurrent mapping of content file(s)..."
-xsl _xhtml_hrefs "$EPUB_SRC/$EP_OPF_PATH" \
-  | parallel --no-notice xhtml_pipe {}
+xh_hrefs "$EPUB_SRC/$EP_OPF_PATH" \
+  | parallel xhtml_pipe {}
