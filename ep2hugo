@@ -75,160 +75,55 @@ path_chk_warn(){
     echo >&2 "- Warning , path not found; '$1'"; }
 }
 
-# ------------------------------------------------
-# func: wrap args in xslt-doc
-#
-#  xsl_doc method "xslt-expr" "xslt-expr2" "xslt-expr3" 
-# ------------------------------------------------
-xsl_doc(){
-  _method=$1
-  _xh_ns='http://www.w3.org/1999/xhtml'
-  _indent='indent="yes"'
 
-  if test "$_method" = "text"; then
-    _omit_decl=yes
-    _indent='indent="no"'
-  elif test "$_method" = "xhtml"; then
-    _omit_decl=yes
-    _def_ns="xmlns=\"$_xh_ns\""
-    _method=xml
-  else
-    _omit_decl=no
-  fi
-  shift
-  cat << _EOF
-<xsl:stylesheet version="1.0" $_def_ns
- xmlns:xh="$_xh_ns"
- xmlns:cont="urn:oasis:names:tc:opendocument:xmlns:container"
- xmlns:ncx="http://www.daisy.org/z3986/2005/ncx/"
- xmlns:opf="http://www.idpf.org/2007/opf"
- xmlns:strings="http://exslt.org/strings"
- xmlns:epub="http://www.idpf.org/2007/ops"
- xmlns:epvoc="http://idpf.org/epub/vocab/structure/"
- xmlns:dsct="http://readin.no/epub/custom-type/#"
- xmlns:z3998="http://www.daisy.org/z3998/2012/vocab/structure/#"
- xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
- exclude-result-prefixes="ncx strings cont opf epub dsct z3998 epvoc">
- <xsl:output method="$_method" encoding="utf-8" 
-    omit-xml-declaration="$_omit_decl" $_indent/>
-$@
-</xsl:stylesheet>
-_EOF
-}
-export -f xsl_doc # bashism !!
+#   X S L T    funcs
+#  -------------------------->
 
-# ----------------------------------
-# func: helper xslt grunt
-#
-# xsl local-xslt-func input-xml
-# ----------------------------------
-xsl(){
-  _xsl_tmp=$(mktemp /tmp/ep2hugo_XXXXXX.xsl)
-  _xsl_func=$1
-  $_xsl_func > "$_xsl_tmp"
-  xsltproc --novalid "$_xsl_tmp" "$2"
-}
-export -f xsl # bashism !!
-
-# -------------------------------------------------------
-# func: wrap args in xslt:templ-tag
-#
-#  xsl_templ "match-expr" "xslt-expr1" "xslt-expr2" .. 
-# -------------------------------------------------------
-xsl_templ(){
-  _MATCH=$1
-  shift
-  _EXPRS=$@
-  printf "<xsl:template match=\"${_MATCH}\">"
-  printf "${_EXPRS}</xsl:template>"
-}
-export -f xsl_templ # bashism !!
-
-# -----------------------------------
-# func: usefull xsl_templ everywhere
-# -----------------------------------
-copy_templ(){
-  xsl_templ "node()|@*" \
-    "<xsl:copy>" \
-    "<xsl:apply-templates select=\"@*|node()\"/>" \
-    "</xsl:copy>"
-}
-export -f copy_templ # bashism !!
-
-
-# rootfile_path <PATH_CONTAINER_XML>
+# rootfile_path <CONTAINER_XML_DOC>
 # output text
 rootfile_path(){
     xsltproc "$TOOL_DIR/xsl/ctrl_hrefs.xsl" "$1"
 }
 
-# ncx_href <PATH_OPF>
+# ncx_href <OPF_DOC>
 # output text
 ncx_href(){
   xsltproc --stringparam Q NCX "$TOOL_DIR/xsl/ctrl_hrefs.xsl" "$1"
 }
 
-# nav_href <PATH_OPF>
+# nav_href <OPF_DOC>
 # output text
 nav_href(){
   xsltproc --stringparam Q NAV "$TOOL_DIR/xsl/ctrl_hrefs.xsl" "$1"
 }
 
-# xh_hrefs <PATH_OPF>
+# xh_hrefs <OPF_DOC>
 # output text records
 xh_hrefs(){
   xsltproc --stringparam Q XHTMLS "$TOOL_DIR/xsl/ctrl_hrefs.xsl" "$1"
 }
 
-
-# purified_xhtml <XH_PATH>
+# xh_cleanup <XH_DOC>
 # output xml doc
-purified_xhtml(){
-  xsltproc --novalid "$TOOL_DIR/xsl/xh.xsl" "$1"
+xh_cleanup(){
+  xsltproc --novalid "$TOOL_DIR/xsl/xh_cleanup.xsl" "$1"
 }
-export -f purified_xhtml
+export -f xh_cleanup
 
-
-
-# ----------------------------------
-# func: gets rid of html+body elems
-#   (and PI's just for the hekl)
-#
-#  inputdoc == xhtml5
-#  output xhtml5
-# -----------------------------------
-_just_body(){
-  xsl_doc xhtml $(xsl_templ "/" \
-    "<xsl:apply-templates select=\"/xh:html/xh:body/*\" />" ) \
-    $(xsl_templ "processing-instruction()") \
-    $(copy_templ) 
+# xh_body_content <XH_DOC>
+# output xml fragments
+xh_body_content(){
+  xsltproc --novalid "$TOOL_DIR/xsl/xh_body_content.xsl" "$1"
 }
-export -f _just_body #bashism !!
+export -f xh_body_content
 
-# --------------------------------
-# func: yaml of xh head metadata
-#
-#   inputdoc == xhtml5
-#   output yaml (text)
-# --------------------------------
-_just_head_meta(){
-  xsl_doc text $(xsl_templ "/" \
-    "<xsl:apply-templates select=\"/xh:html/xh:head/*\" />" ) \
-    $(xsl_templ "xh:title" \
-      "<xsl:text>title : \"</xsl:text>" \
-      "<xsl:value-of select=\".\" />" \
-      "<xsl:text>\"&#xA;</xsl:text>" ) \
-    $(xsl_templ "xh:meta[@content]" \
-      "<xsl:value-of select=\"(@name|@http-equiv)[1]\"/>" \
-      "<xsl:text> : \"</xsl:text>" \
-      "<xsl:value-of select=\"@content\" />" \
-      "<xsl:text>\"&#xA;</xsl:text>" )
+# head_meta_toml <XH_DOC>
+# output toml
+head_meta_toml(){
+  xsltproc --novalid "$TOOL_DIR/xsl/xh_head.xsl" "$1" \
+    | xsltproc --novalid "$TOOL_DIR/xsl/head2toml.xsl" -
 }
-export -f _just_head_meta # bashism !!
-
-
-    
-    
+export -f head_meta_toml
 
 # =============================================
 #                         _       
@@ -237,8 +132,6 @@ export -f _just_head_meta # bashism !!
 #        | | | | | | (_| | | | | |
 #        |_| |_| |_|\__,_|_|_| |_|
 # 
-
-
 
 # -----------------------------
 # collect args if any
@@ -345,12 +238,12 @@ echo "ok"
 # func: frontmatter
 # ------------------
 frontmatter(){
-  echo "---"
-  xsl _just_head_meta "$1"
+  echo "+++"
+  head_meta_toml "$1"
   # TODO fetch also from TOC/NCX
   # TODO bc, prev, next
   echo
-  echo "---"
+  echo "+++"
 }
 export -f frontmatter
 
@@ -361,9 +254,8 @@ export _src=$EPUB_SRC/$EP_ROOT_DIR
 export _dest=$HUGO_DIR/$CONTENT_DIRNAME
 xhtml_pipe(){
   printf " >∙>∙ '$1' ..."
-  purified_xhtml "$_src/$1" \
-    | xsl _just_body /dev/stdin \
-    | ( frontmatter "$_src/$1" ; cat /dev/stdin ) \
+  xh_cleanup "$_src/$1" \
+    | (frontmatter "$_src/$1" ; xh_body_content - ) \
     > "$_dest/$1"
   echo ok
 }

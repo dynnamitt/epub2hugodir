@@ -61,7 +61,7 @@
 
 
     <!-- 
-        move (3.0) INFLECTED sematic into class attr 
+        move (3.0) INFLECTED semantic into class attr 
     -->
     <xsl:template match="*[@epub:type]" mode="move_epub_type_attrs">
 
