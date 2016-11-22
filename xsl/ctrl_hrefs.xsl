@@ -35,7 +35,7 @@
             </xsl:when>
             <xsl:when test="$Q = 'NAV'">
                 <xsl:if test="@version != '3.0'">
-                    <xsl:message terminate="yes">ONLY 3.x supports NAV</xsl:message>
+                    <xsl:message>XSL: ONLY 3.x supports NAV</xsl:message>
                 </xsl:if>
                 <xsl:value-of select="//opf:item[@properties='nav']/@href"/>
             </xsl:when>
@@ -44,7 +44,7 @@
             </xsl:when>
             <!-- more to come -->
             <xsl:otherwise>
-                <xsl:message terminate="yes">No Q param given. Must be either NCX,NAV or XHTMLS</xsl:message>
+                <xsl:message terminate="yes">XSL: No Q param given. Must be either NCX,NAV or XHTMLS</xsl:message>
             </xsl:otherwise>
         </xsl:choose>
        

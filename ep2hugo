@@ -15,6 +15,7 @@ HUGO_CONF=config.toml
 DEF_XPATH_DRAFT=
 DEF_CONTENT_DIRNAME=_content
 DEF_PUBLIC_DIRNAME=_public
+DEF_TOC_FILENAME=__toc__.html
 
 TOOL_DIR=$(dirname $0)
 export TOOL_DIR
@@ -37,6 +38,7 @@ usage() {
   echo >&2 "Flags:"
   echo >&2"  -d string     Xpath marking content chunk as draft. Default empty"
   echo >&2 "  -c string     Contentdir name. Default is '_content'"
+  echo >&2 "  -t string     Tocfile/nav name. Default is '__toc__.html'"
   exit 1
 
 }
@@ -88,23 +90,26 @@ rootfile_path(){
 # ncx_href <OPF_DOC>
 # output text
 ncx_href(){
-  xsltproc --stringparam Q NCX "$TOOL_DIR/xsl/ctrl_hrefs.xsl" "$1"
+  xsltproc --stringparam Q NCX \
+    "$TOOL_DIR/xsl/ctrl_hrefs.xsl" "$1"
 }
 
 # nav_href <OPF_DOC>
 # output text
 nav_href(){
-  xsltproc --stringparam Q NAV "$TOOL_DIR/xsl/ctrl_hrefs.xsl" "$1"
+  xsltproc --stringparam Q NAV \
+    "$TOOL_DIR/xsl/ctrl_hrefs.xsl" "$1"
 }
 
 # xh_hrefs <OPF_DOC>
 # output text records
 xh_hrefs(){
-  xsltproc --stringparam Q XHTMLS "$TOOL_DIR/xsl/ctrl_hrefs.xsl" "$1"
+  xsltproc --stringparam Q XHTMLS \
+    "$TOOL_DIR/xsl/ctrl_hrefs.xsl" "$1"
 }
 
 # xh_cleanup <XH_DOC>
-# output xml doc
+# output xhtml
 xh_cleanup(){
   xsltproc --novalid "$TOOL_DIR/xsl/xh_cleanup.xsl" "$1"
 }
@@ -125,6 +130,12 @@ head_meta_toml(){
 }
 export -f head_meta_toml
 
+# ncx_into_nav <NCX_DOC>
+# output xhtml
+ncx_into_nav(){
+  xsltproc --novalid "$TOOL_DIR/xsl/ncx2end.xsl" "$1"
+}
+
 # =============================================
 #                         _       
 #         _ __ ___   __ _(_)_ __  
@@ -133,9 +144,7 @@ export -f head_meta_toml
 #        |_| |_| |_|\__,_|_|_| |_|
 # 
 
-# -----------------------------
-# collect args if any
-# -----------------------------
+
 
 # ---------------------
 # args, Input+Output
@@ -144,10 +153,14 @@ EPUB=$1
 test -z "$EPUB" && usage "epubfile empty"
 
 HUGO_DIR=${2:-$(dirname "$EPUB")}
+path_chk_warn $HUGO_DIR
 # test -z "$HUGO_DIR" && usage "destdir empty"
 
+# TODO collect args if any
 CONTENT_DIRNAME=${DEF_CONTENT_DIRNAME}
-
+TOC_FILENAME=${DEF_TOC_FILENAME}
+CONTENT_DIR=$HUGO_DIR/$CONTENT_DIRNAME
+export CONTENT_DIR
 # ---------------------------
 # is DEST = SRC ? just warn
 # ---------------------------
@@ -182,7 +195,9 @@ else
   echo "* Epubfile will be unzipped."
   exist_or_die "$EPUB"
   have_cmd unzip
-  printf "* Unzipping to"
+ONTENT_DIRNAME=${DEF_CONTENT_DIRNAME}
+TOC_FILENAME=${DEF_TOC_FILENAME}
+
   _tmp_dir_unzip=$(mktemp --directory /tmp/epub_dir_XXXXXX)
   printf " tempdir '$_tmp_dir_unzip'..."
   unzip -q "$EPUB" -d "$_tmp_dir_unzip"
@@ -193,39 +208,42 @@ fi
 
 
 # -----------------------------------
-# Move+transform content into destdir
+#  dynamic paths 
 # -----------------------------------
-path_chk_warn $HUGO_DIR
-
-CONTENT_DIR=$HUGO_DIR/$CONTENT_DIRNAME
 mkdir -p $CONTENT_DIR
 
 EP_OPF_PATH=$(rootfile_path "$EPUB_SRC/$EP_CONT")
 EP_ROOT_DIR=$(dirname "$EP_OPF_PATH")
 echo "* Packagefile rel path is '$EP_OPF_PATH'"
 
-# -------------------------------
-#  locate TOC xml-doc(s)
-# -------------------------------
-EP_NCX_HREF=$(ncx_href "$EPUB_SRC/$EP_OPF_PATH")
+# --------------------------------+++++
+#  check for TOC or make one from NCX
+# --------------------------------+++++
 
-if test -z "$EP_NCX_HREF"; then
-  printf "! NCX not found, searching for xhtml-toc..."
-  EP_XHTOC_HREF=$(xsl _toc_href "$EPUB_SRC/$EP_OPF_PATH")
-  if test -z "$EP_XHTOC_HREF"; then
-    echo "NOT FOUND, aborting!"
-    exit 1
-  else
-    EP_XHTOC_PATH=$EP_ROOT_DIR/$EP_XHTOC_HREF
-    echo " '$EP_XHTOC_PATH'"
-    echo "- making NCX..."
-    echo "    NOT IMPL!"
-    exit 1
-  fi
+EP_XHTOC_HREF=$(nav_href "$EPUB_SRC/$EP_OPF_PATH")
+
+
+if test -z "$EP_XHTOC_HREF"; then
+    echo "* html TOC not found , version below 3.0"
+    EP_NCX_HREF=$(ncx_href "$EPUB_SRC/$EP_OPF_PATH")
+    if test -z "$EP_NCX_HREF"; then
+      echo "! NCX not found, aborting."
+      exit 1
+    else
+      EP_NCX_PATH=$EP_ROOT_DIR/$EP_NCX_HREF
+      echo "* NCX rel path is '$EP_NCX_PATH'"
+      printf "* building html version..."
+      tmpnav=$(mktemp /tmp/ep3_nav_XXXXXX.htm)
+      ncx_into_nav "$EPUB_SRC/$EP_NCX_PATH" > $tmpnav
+      echo ok
+      exit 111
+      xhtml_pipe $tmpnav $HUGO_DIR/$CONTENT_DIR $TOC_FILENAME
+    fi
 else
-  EP_NCX_PATH=$EP_ROOT_DIR/$EP_NCX_HREF
-  echo "* NCX rel path is '$EP_NCX_PATH'"
+  EP_XHTOC_PATH=$EP_ROOT_DIR/$EP_XHTOC_HREF
+  echo "* html TOC rel path '$EP_XHTOC_PATH' "
 fi
+
 
 # config.toml
 printf "* Writing '$HUGO_DIR/$HUGO_CONF'..."
@@ -251,12 +269,11 @@ export -f frontmatter
 # func: pipeline for each content dest
 # -----------------------------------------
 export _src=$EPUB_SRC/$EP_ROOT_DIR
-export _dest=$HUGO_DIR/$CONTENT_DIRNAME
 xhtml_pipe(){
   printf " >∙>∙ '$1' ..."
   xh_cleanup "$_src/$1" \
     | (frontmatter "$_src/$1" ; xh_body_content - ) \
-    > "$_dest/$1"
+    > "$CONTENT_DIR/$1"
   echo ok
 }
 export -f xhtml_pipe # bashism !!

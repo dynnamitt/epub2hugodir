@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<route>
+    <enabled>true</enabled>
+    <http_code>0</http_code>
+    <meta_values/>
+    <names>
+        <name lang="no">Ex.grunnleggende</name>
+    </names>
+    <partial_redir>false</partial_redir>
+    <redir_to_id>/new-id</redir_to_id>
+</route>
