@@ -27,7 +27,7 @@ export TOOL_DIR
 #  usage "error-text"
 # ------------------------
 usage() {
-  echo >&2 "FAILED: $1"
+  echo >&2 "ERROR: $1"
   echo >&2
   echo >&2 "Usage:"
   echo >&2 "  $0 [flags] epubfile [destdir]"
@@ -35,9 +35,10 @@ usage() {
   echo >&2 "  epubfile can be either epub-file OR extracted directory"
   echo >&2 "  destdir default is basedir/root of epubfile"
   echo >&2
-  echo >&2 "Flags:"
-  echo >&2"  -d string     Xpath marking content chunk as draft. Default empty"
+  echo >&2 "Flags altering output:"
+  echo >&2 "  -d string     Xpath marking content chunk as draft. Default empty"
   echo >&2 "  -c string     Contentdir name. Default is '_content'"
+  echo >&2 "  -s string     Section name. Default is basename of epub"
   echo >&2 "  -t string     Tocfile/nav name. Default is '__toc__.html'"
   exit 1
 
@@ -136,6 +137,33 @@ ncx_into_nav(){
   xsltproc --novalid "$TOOL_DIR/xsl/ncx2end.xsl" "$1"
 }
 
+
+# Composed funcs
+
+
+# frontmatter <XH_DOC>
+# output toml
+frontmatter(){
+  echo "+++"
+  head_meta_toml "$1"
+  # TODO fetch also from TOC/NCX
+  # TODO bc, prev, next
+  echo
+  echo "+++"
+}
+export -f frontmatter
+
+# xhtml_pipe <PATH> <SLUG> <DEST_DIR>
+xhtml_pipe(){
+  printf "∙> '$2' ..."
+  xh_cleanup "$1" \
+    | (frontmatter "$1" ; xh_body_content - ) \
+    > "$3/$2"
+  echo ok
+}
+export -f xhtml_pipe # bashism !!
+
+
 # =============================================
 #                         _       
 #         _ __ ___   __ _(_)_ __  
@@ -150,7 +178,7 @@ ncx_into_nav(){
 # args, Input+Output
 # ---------------------
 EPUB=$1
-test -z "$EPUB" && usage "epubfile empty"
+test -z "$EPUB" && usage "epubfile argument missing"
 
 HUGO_DIR=${2:-$(dirname "$EPUB")}
 path_chk_warn $HUGO_DIR
@@ -159,8 +187,9 @@ path_chk_warn $HUGO_DIR
 # TODO collect args if any
 CONTENT_DIRNAME=${DEF_CONTENT_DIRNAME}
 TOC_FILENAME=${DEF_TOC_FILENAME}
-CONTENT_DIR=$HUGO_DIR/$CONTENT_DIRNAME
-export CONTENT_DIR
+SECTION_DIRNAME=$(basename -s.epub $EPUB)
+DEST=$HUGO_DIR/$CONTENT_DIRNAME/$SECTION_DIRNAME
+
 # ---------------------------
 # is DEST = SRC ? just warn
 # ---------------------------
@@ -170,6 +199,7 @@ then
   echo >&2 "! NB, destdir same as EPUB location"
 fi
 
+mkdir -p "$DEST"
 
 # ----------------------
 # commands validation
@@ -195,9 +225,7 @@ else
   echo "* Epubfile will be unzipped."
   exist_or_die "$EPUB"
   have_cmd unzip
-ONTENT_DIRNAME=${DEF_CONTENT_DIRNAME}
-TOC_FILENAME=${DEF_TOC_FILENAME}
-
+  printf "* Unzipping to"
   _tmp_dir_unzip=$(mktemp --directory /tmp/epub_dir_XXXXXX)
   printf " tempdir '$_tmp_dir_unzip'..."
   unzip -q "$EPUB" -d "$_tmp_dir_unzip"
@@ -210,74 +238,51 @@ fi
 # -----------------------------------
 #  dynamic paths 
 # -----------------------------------
-mkdir -p $CONTENT_DIR
 
-EP_OPF_PATH=$(rootfile_path "$EPUB_SRC/$EP_CONT")
-EP_ROOT_DIR=$(dirname "$EP_OPF_PATH")
-echo "* Packagefile rel path is '$EP_OPF_PATH'"
-
-# --------------------------------+++++
-#  check for TOC or make one from NCX
-# --------------------------------+++++
-
-EP_XHTOC_HREF=$(nav_href "$EPUB_SRC/$EP_OPF_PATH")
+EP_OPF_HREF=$(rootfile_path "$EPUB_SRC/$EP_CONT")
+EP_ROOT_DIRNAME=$(dirname "$EP_OPF_HREF")
+echo "* Packagefile rel path is '$EP_OPF_HREF'"
+SRC_PATH=$EPUB_SRC/$EP_ROOT_DIRNAME
+EP_XHTOC_HREF=$(nav_href "$EPUB_SRC/$EP_OPF_HREF")
 
 
+# --------------------------------
+# build TOC from NCX if required
+# --------------------------------
 if test -z "$EP_XHTOC_HREF"; then
     echo "* html TOC not found , version below 3.0"
-    EP_NCX_HREF=$(ncx_href "$EPUB_SRC/$EP_OPF_PATH")
+    EP_NCX_HREF=$(ncx_href "$EPUB_SRC/$EP_OPF_HREF")
     if test -z "$EP_NCX_HREF"; then
       echo "! NCX not found, aborting."
       exit 1
     else
-      EP_NCX_PATH=$EP_ROOT_DIR/$EP_NCX_HREF
+      EP_NCX_PATH=$EP_ROOT_DIRNAME/$EP_NCX_HREF
       echo "* NCX rel path is '$EP_NCX_PATH'"
       printf "* building html version..."
-      tmpnav=$(mktemp /tmp/ep3_nav_XXXXXX.htm)
-      ncx_into_nav "$EPUB_SRC/$EP_NCX_PATH" > $tmpnav
+      tocdir_=$(mktemp -d /tmp/ep2hugo_toc_XXXX)
+      tmp_toc=$tocdir_/$TOC_FILENAME
+      ncx_into_nav "$EPUB_SRC/$EP_NCX_PATH" > $tmp_toc
       echo ok
-      exit 111
-      xhtml_pipe $tmpnav $HUGO_DIR/$CONTENT_DIR $TOC_FILENAME
+      # first write
+      xhtml_pipe $tmp_toc $TOC_FILENAME $DEST
     fi
 else
-  EP_XHTOC_PATH=$EP_ROOT_DIR/$EP_XHTOC_HREF
+  EP_XHTOC_PATH=$EP_ROOT_DIRNAME/$EP_XHTOC_HREF
   echo "* html TOC rel path '$EP_XHTOC_PATH' "
 fi
 
 
-# config.toml
+# config.toml,
+# 2nd write
 printf "* Writing '$HUGO_DIR/$HUGO_CONF'..."
 cat << _EOF > "$HUGO_DIR/$HUGO_CONF"
 contentdir = "$CONTENT_DIRNAME"
 _EOF
 echo "ok"
 
-# ------------------
-# func: frontmatter
-# ------------------
-frontmatter(){
-  echo "+++"
-  head_meta_toml "$1"
-  # TODO fetch also from TOC/NCX
-  # TODO bc, prev, next
-  echo
-  echo "+++"
-}
-export -f frontmatter
-
-# -----------------------------------------
-# func: pipeline for each content dest
-# -----------------------------------------
-export _src=$EPUB_SRC/$EP_ROOT_DIR
-xhtml_pipe(){
-  printf " >∙>∙ '$1' ..."
-  xh_cleanup "$_src/$1" \
-    | (frontmatter "$_src/$1" ; xh_body_content - ) \
-    > "$CONTENT_DIR/$1"
-  echo ok
-}
-export -f xhtml_pipe # bashism !!
-
-echo "* Concurrent mapping of content file(s)..."
-xh_hrefs "$EPUB_SRC/$EP_OPF_PATH" \
-  | parallel xhtml_pipe {}
+ 
+# 3rd write
+echo "* PARALLEL xh pipe starting..."
+xh_hrefs "$EPUB_SRC/$EP_OPF_HREF" \
+  | xargs -L1 -I% printf "$SRC_PATH/%\t%\t$DEST\n" \
+  | parallel --colsep '\t' xhtml_pipe
