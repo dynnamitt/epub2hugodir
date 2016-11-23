@@ -39,7 +39,7 @@ usage() {
   echo >&2 "  -d string     Xpath marking content chunk as draft. Default empty"
   echo >&2 "  -c string     Contentdir name. Default is '_content'"
   echo >&2 "  -s string     Section name. Default is basename of epub"
-  echo >&2 "  -t string     Tocfile/nav name. Default is '__toc__.html'"
+  echo >&2 "  -t string     Toc dest name if NCX. Default is '__toc__.html'"
   exit 1
 
 }
@@ -141,23 +141,32 @@ ncx_into_nav(){
 # Composed funcs
 
 
-# frontmatter <XH_DOC>
+# frontmatter <XH_DOC> <TOC_SLUG> <SPINE_FILE>
 # output toml
 frontmatter(){
   echo "+++"
-  head_meta_toml "$1"
-  # TODO fetch also from TOC/NCX
-  # TODO bc, prev, next
+
+  head_meta_toml "$1" date_ descr_ cats_
+  echo "title =" #?
+  echo "date =" #? 
+  echo "description =" #?
+  echo "categories = []" #?
+
+  echo "toc_href = \"$2\""
+  echo "next_href = " #pick_following $3
+  echo "prev_href = " #pick_previous $3
+  echo "start_href = " #pick_previous $3
+  echo "end_href = " #pick_previous $3
   echo
   echo "+++"
 }
 export -f frontmatter
 
-# xhtml_pipe <PATH> <SLUG> <DEST_DIR>
+# xhtml_pipe <PATH> <SLUG> <DEST_DIR> <TOC_SLUG>
 xhtml_pipe(){
   printf "∙> '$2' ..."
   xh_cleanup "$1" \
-    | (frontmatter "$1" ; xh_body_content - ) \
+    | (frontmatter "$1" "$4" ; xh_body_content - ) \
     > "$3/$2"
   echo ok
 }
@@ -266,25 +275,12 @@ if test -z "$EP_XHTOC_HREF"; then
       echo ok
       # first write
       xhtml_pipe $tmp_toc $TOC_FILENAME $DEST
+      TOC_SLUG=$TOC_FILENAME
     fi
 else
   EP_XHTOC_PATH=$EP_ROOT_DIRNAME/$EP_XHTOC_HREF
   echo "* html TOC rel path '$EP_XHTOC_PATH' "
-  echo "!!! FIXME !!!!make sure DEST is using CORRECT filename here" 
-
-  # solution 0 -- MAYBE each file-frontmatter just should have xref
-  # to toc and remove renameing option in cli 
-
-  # solution 1 -- remove nav from xh_hrefs-records
-  #  & pipe it here INSTEAD
-
-  # NB XREFs to "old" tocname can exist
-
-  # we need 2 kopies (or softlink)
-
-  # solution 2 , run below code first THEN make softlink __toc__.htm
-  # may fail silently if name=softlink
-
+  TOC_SLUG=$EP_XHTOC_HREF
 fi
 
 
@@ -300,5 +296,5 @@ echo "ok"
 # 3rd write
 echo "* PARALLEL xh pipe starting..."
 xh_hrefs "$EPUB_SRC/$EP_OPF_HREF" \
-  | xargs -L1 -I% printf "$SRC_PATH/%\t%\t$DEST\n" \
+  | xargs -L1 -I% printf "$SRC_PATH/%\t%\t$DEST\t$TOC_SLUG\n" \
   | parallel --colsep '\t' xhtml_pipe
