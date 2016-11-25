@@ -141,11 +141,12 @@ ncx_into_nav(){
 # Composed funcs
 
 
-# frontmatter <XH_DOC> <TOC_SLUG> <SPINE_FILE>
+# frontmatter <XH_DOC> <TOC_SLUG> <SPINE_FILE> <START_HREF> <END_HREF>
 # output toml
 frontmatter(){
   echo "+++"
 
+  # avoid dups!
   head_meta_toml "$1" date_ descr_ cats_
   echo "title =" #?
   echo "date =" #? 
@@ -155,8 +156,8 @@ frontmatter(){
   echo "toc_href = \"$2\""
   echo "next_href = " #pick_following $3
   echo "prev_href = " #pick_previous $3
-  echo "start_href = " #pick_previous $3
-  echo "end_href = " #pick_previous $3
+  echo "start_href = \"$4\"" #pick_previous $3
+  echo "end_href = \"$5\"" #pick_previous $3
   echo
   echo "+++"
 }
