@@ -36,6 +36,7 @@
 
    </manifest>
    <r:spine xmlns:r="http://www.idpf.org/2007/opf" toc="ncx">
+       <r:itemref idref="htmltoc"/>
            <r:itemref idref="d8d4430c"/>
    </r:spine>
    

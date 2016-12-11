@@ -15,7 +15,7 @@
     <xsl:output method="text" encoding="utf-8" 
         omit-xml-declaration="yes" indent="yes" />
     
-    <!-- IF opf is input. NCX, NAV, XHTMLS -->
+    <!-- IF opf is input. NCX, NAV, XHTMLS, SPINE -->
     <xsl:param name="Q"/>
     
     
@@ -31,20 +31,23 @@
         
         <xsl:choose>
             <xsl:when test="$Q = 'NCX'">
-                <xsl:value-of select="//opf:item[@media-type=$MT_NCX]/@href"/>
+                <xsl:value-of select="opf:manifest/opf:item[@media-type=$MT_NCX]/@href"/>
             </xsl:when>
             <xsl:when test="$Q = 'NAV'">
                 <xsl:if test="@version != '3.0'">
                     <xsl:message>XSL: ONLY 3.x supports NAV</xsl:message>
                 </xsl:if>
-                <xsl:value-of select="//opf:item[@properties='nav']/@href"/>
+                <xsl:value-of select="opf:manifest/opf:item[@properties='nav']/@href"/>
             </xsl:when>
             <xsl:when test="$Q = 'XHTMLS'">
-                <xsl:apply-templates select="//opf:item[@media-type=$MT_XH]" mode="xhtml-list"/>
+                <xsl:apply-templates select="opf:manifest/opf:item[@media-type=$MT_XH]" mode="xhtml-list"/>
+            </xsl:when>          
+            <xsl:when test="$Q = 'SPINE'">
+                <xsl:apply-templates 
+                    select="opf:spine/opf:itemref/@idref"/>
             </xsl:when>
-            <!-- more to come -->
             <xsl:otherwise>
-                <xsl:message terminate="yes">XSL: No Q param given. Must be either NCX,NAV or XHTMLS</xsl:message>
+                <xsl:message terminate="yes">XSL: No Q param given. Must be either NCX,NAV,XHTMLS or SPINE</xsl:message>
             </xsl:otherwise>
         </xsl:choose>
        
@@ -58,5 +61,15 @@
         <xsl:if test="following-sibling::opf:item[@media-type=$MT_XH]/@href"></xsl:if><xsl:text>&#xA;</xsl:text>
         <!-- maybe id -->
     </xsl:template>
+    
+    <!--
+        spine
+    -->
+    <xsl:template match="@idref">
+        <xsl:variable name="idref" select="."/>
+        <xsl:value-of select="//opf:item[@id = $idref]/@href"/><xsl:text>&#xA;</xsl:text>
+        <!-- maybe id -->
+    </xsl:template>
+    
 
 </xsl:stylesheet>

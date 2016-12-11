@@ -44,6 +44,10 @@ usage() {
 
 }
 
+indent(){
+  sed 's/^/    /'
+}
+
 # --------------------------------
 # func: exit unless command found
 #  
@@ -152,6 +156,7 @@ frontmatter(){
   echo "date =" #? 
   echo "description =" #?
   echo "categories = []" #?
+  # dup
 
   echo "toc_href = \"$2\""
   echo "next_href = " #pick_following $3
@@ -161,7 +166,7 @@ frontmatter(){
   echo
   echo "+++"
 }
-export -f frontmatter
+export -f frontmatter # bashism
 
 # xhtml_pipe <PATH> <SLUG> <DEST_DIR> <TOC_SLUG>
 xhtml_pipe(){
