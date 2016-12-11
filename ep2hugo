@@ -113,6 +113,13 @@ xh_hrefs(){
     "$TOOL_DIR/xsl/ctrl_hrefs.xsl" "$1"
 }
 
+# spine_hrefs <OPF_DOC>
+# output text records
+spine_hrefs(){
+  xsltproc --stringparam Q SPINE \
+    "$TOOL_DIR/xsl/ctrl_hrefs.xsl" "$1"
+}
+
 # xh_cleanup <XH_DOC>
 # output xhtml
 xh_cleanup(){
@@ -168,9 +175,10 @@ frontmatter(){
 }
 export -f frontmatter # bashism
 
-# xhtml_pipe <PATH> <SLUG> <DEST_DIR> <TOC_SLUG>
+# xhtml_pipe <PATH> <SLUG> <DEST_DIR> <TOC_SLUG> <SPINE>
 xhtml_pipe(){
   printf "∙> '$2' ..."
+
   xh_cleanup "$1" \
     | (frontmatter "$1" "$4" ; xh_body_content - ) \
     > "$3/$2"
@@ -298,9 +306,17 @@ contentdir = "$CONTENT_DIRNAME"
 _EOF
 echo "ok"
 
- 
+SPINE=$(mktemp /tmp/ep2hugo-spine-XXXXX)
+printf "* Writing spine href into '$SPINE'..."
+spine_hrefs "$EPUB_SRC/$EP_OPF_HREF" > $SPINE
+echo "ok"
+
+START_HREF=$(head -n1 $5)
+END_HREF=$(tail -n1 $5)
+
+
 # 3rd write
-echo "* PARALLEL xh pipe starting..."
+echo "* PARALLEL xh pipe starting :"
 xh_hrefs "$EPUB_SRC/$EP_OPF_HREF" \
-  | xargs -L1 -I% printf "$SRC_PATH/%\t%\t$DEST\t$TOC_SLUG\n" \
-  | parallel --colsep '\t' xhtml_pipe
+  | xargs -L1 -I% printf "$SRC_PATH/%\t%\t$DEST\t$TOC_SLUG\t$SPINE\n" \
+  | parallel --colsep '\t' xhtml_pipe 
